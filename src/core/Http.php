@@ -47,7 +47,7 @@ class Http
         } catch (Throwable $e) {
             $this->reportException($e);
 
-            $response = $this->renderException($e);
+            $response = $this->renderException($request, $e);
         }
 
         return $response;
@@ -58,6 +58,7 @@ class Http
      * Date: 2022-09-20
      * Time: 17:11
      * @param Throwable $e
+     * @return void
      */
     protected function reportException(Throwable $e)
     {
@@ -68,11 +69,13 @@ class Http
      * Note: 使用异常处理类将异常渲染到HTTP响应中
      * Date: 2022-09-20
      * Time: 17:15
+     * @param Request $request
      * @param Throwable $e
+     * @return Response
      */
-    protected function renderException(Throwable $e)
+    protected function renderException($request, Throwable $e)
     {
-        return $this->app->make(Handle::class)->render($e);
+        return $this->app->make(Handle::class)->render($request, $e);
     }
 
     /**
@@ -133,7 +136,7 @@ class Http
     protected function loadRoutes(): void
     {
         $routePath = $this->getRoutePath();
- 
+
         if (is_dir($routePath)) {
             $files = glob($routePath . '*.php');
             foreach ($files as $file) {

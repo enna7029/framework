@@ -4,7 +4,10 @@ declare(strict_types=1);
 namespace Enna\Framework;
 
 use Closure;
+use Enna\Framework\Route\Resource;
 use LogicException;
+use Throwable;
+use Enna\Framework\Exception\Handle;
 
 
 class Middleware
@@ -142,6 +145,24 @@ class Middleware
 
         $pipeline = new Pipeline();
         return $pipeline->through($pipes)->whenException([$this, 'handleException']);
+    }
+
+    /**
+     * Note: 异常处理
+     * Date: 2022-12-02
+     * Time: 18:19
+     * @param Request $passalbe
+     * @param Throwable $e
+     * @return Response
+     */
+    public function handleException($passalbe, Throwable $e)
+    {
+        /** @var Handle $handler */
+        $handler = $this->app->make(Handle::class);
+
+        $handler->report($e);
+
+        return $handler->render($passable, $e);
     }
 
     /**

@@ -11,7 +11,7 @@ class ErrorException extends Exception
      * 异常的级别
      * @var int
      */
-    protected $serverity;
+    protected $severity;
 
     /**
      * ErrorException constructor.
@@ -22,7 +22,7 @@ class ErrorException extends Exception
      */
     public function __construct(int $serverity, string $message = "", string $file, int $line)
     {
-        $this->serverity = $serverity;
+        $this->severity = $serverity;
         $this->message = $message;
         $this->file = $file;
         $this->line = $line;
@@ -32,8 +32,8 @@ class ErrorException extends Exception
     /*
      * 获取错误级别
      */
-    final public function getServerity()
+    final public function getSeverity()
     {
-        return $this->serverity;
+        return $this->severity;
     }
 }

@@ -107,6 +107,7 @@ class Container implements ContainerInterface, ArrayAccess
      * @param string $abstract 类名或标识
      * @param array $vars 变量
      * @param bool $newInstance 是否每次创建新的实例
+     * @return mixed
      */
     public function make(string $abstract, array $vars = [], bool $newInstance = false)
     {
