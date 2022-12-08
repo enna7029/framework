@@ -75,7 +75,7 @@ abstract class Manager
      * Note: 获取驱动实例
      * Date: 2022-12-06
      * Time: 17:48
-     * @param string|null $name 驱动名称
+     * @param string|null $name 渠道名称
      * @return mixed
      */
     public function driver(string $name = null)
@@ -93,7 +93,7 @@ abstract class Manager
      * Note: 获取驱动实例
      * Date: 2022-12-06
      * Time: 17:59
-     * @param string|null $name 驱动名称
+     * @param string|null $name 渠道名称
      * @return mixed
      */
     public function getDriver(string $name = null)
@@ -105,7 +105,7 @@ abstract class Manager
      * Note: 创建驱动
      * Date: 2022-12-06
      * Time: 18:42
-     * @param string $name 驱动名称
+     * @param string $name 渠道名称
      * @return mixed
      */
     protected function createDriver(string $name)

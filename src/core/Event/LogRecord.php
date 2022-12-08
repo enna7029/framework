@@ -6,11 +6,13 @@ namespace Enna\Framework\Event;
 class LogRecord
 {
     /**
+     * 日志级别
      * @var string
      */
     public $type;
 
     /**
+     * 日志信息
      * @var string
      */
     public $message;

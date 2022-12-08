@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Enna\Framework;
 
+use Enna\Framework\Log\Channel;
 use Enna\Framework\Log\ChannelSet;
 use http\Exception\InvalidArgumentException;
 
@@ -106,8 +107,8 @@ class Log extends Manager
      * Note: 获取渠道实例
      * Date: 2022-12-06
      * Time: 16:36
-     * @param array|string|null $name 通道名称
-     * @return
+     * @param array|string|null $name 渠道名称
+     * @return Channel|ChannelSet
      */
     public function channel($name = null)
     {
@@ -131,7 +132,8 @@ class Log extends Manager
     public function record($msg, string $type = 'info', array $context, bool $lazy = true)
     {
         $channel = $this->getConfig('type_channel.' . $type);
-        $this->channel($channel)->record();
+        
+        $this->channel($channel)->record($msg, $type, $context, $lazy);
 
         return $this;
     }
@@ -140,7 +142,7 @@ class Log extends Manager
      * Note: 创建驱动实例
      * Date: 2022-12-07
      * Time: 10:14
-     * @param string $name 驱动名称
+     * @param string $name 渠道名称
      * @return mixed|void
      */
     public function createDriver(string $name)
@@ -150,6 +152,6 @@ class Log extends Manager
         $lazy = !$this->getChannelConfig($name, 'realtime_write', false) && !$this->app->runningInConsole();
         $allow = array_merge($this->getConfig('level', []), $this->getChannelConfig($name, 'level', []));
 
-        return new Channel();
+        return new Channel($name, $driver, $allow, $lazy, $this->app->event);
     }
 }
