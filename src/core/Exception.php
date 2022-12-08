@@ -34,7 +34,7 @@ class Exception extends \Exception
      * Time: 11:27
      * @return array
      */
-    final protected function getData()
+    final public function getData()
     {
         return $this->data;
     }

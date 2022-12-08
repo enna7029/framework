@@ -155,7 +155,7 @@ class Middleware
      * @param Throwable $e
      * @return Response
      */
-    public function handleException($passalbe, Throwable $e)
+    public function handleException($passable, Throwable $e)
     {
         /** @var Handle $handler */
         $handler = $this->app->make(Handle::class);

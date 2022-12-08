@@ -65,7 +65,7 @@ class Handle
             }
 
             try {
-                $this->app->log->record($log, 'error');
+                //$this->app->log->record($log, 'error');
             } catch (Exception $e) {
             }
         }
@@ -139,7 +139,35 @@ class Handle
     protected function convertExceptionToArray(Throwable $exception)
     {
         if ($this->app->isDebug()) {
+            $traces = [];
+            $nextException = $exception;
 
+            do {
+                $traces[] = [
+                    'name' => get_class($nextException),
+                    'file' => $nextException->getFile(),
+                    'line' => $nextException->getLine(),
+                    'code' => $this->getCode($nextException),
+                    'message' => $this->getMessage($nextException),
+                    'trace' => $nextException->getTrace(),
+                    'source' => $this->getSourceCode($nextException),
+                ];
+            } while ($nextException = $nextException->getPrevious());
+
+            $data = [
+                'code' => $this->getCode($exception),
+                'message' => $this->getMessage($exception),
+                'traces' => $traces,
+                'datas' => $this->getExtendData($exception),
+                'tables' => [
+                    'GET Data' => $this->app->request->get(),
+                    'POST Data' => $this->app->request->post(),
+                    'Files' => $this->app->request->file(),
+                    'Cookies' => $this->app->request->cookie(),
+                    'Session' => '',
+                    'Server Data' => $this->app->request->server(),
+                ],
+            ];
         } else {
             $data = [
                 'code' => $this->getCode($exception),
@@ -180,7 +208,7 @@ class Handle
      */
     protected function getCode(Throwable $exception)
     {
-        $code = $this->getCode();
+        $code = $exception->getCode();
 
         if (!$code && $exception instanceof ErrorException) {
             $code = $exception->getSeverity();
@@ -198,9 +226,56 @@ class Handle
      */
     protected function getMessage(Throwable $exception)
     {
-        $message = $this->getMessage();
+        $message = $exception->getMessage();
+
+        if ($this->app->runningInConsole()) {
+            return $message;
+        }
 
         return $message;
+    }
+
+    /**
+     * Note: 获取出错文件内容
+     * Date: 2022-12-05
+     * Time: 14:18
+     * @param Throwable $exception
+     * @return array
+     */
+    protected function getSourceCode(Throwable $exception)
+    {
+        $line = $exception->getLine();
+        $first = ($line - 9 > 0) ? $line - 9 : 1;
+
+        try {
+            $contents = file($exception->getFile());
+            $source = [
+                'first' => $first,
+                'source' => array_slice($contents, $first - 1, 19)
+            ];
+        } catch (Exception $e) {
+            $source = [];
+        }
+
+        return $source;
+    }
+
+    /**
+     * Note: 获取异常扩展数据
+     * Date: 2022-12-05
+     * Time: 14:31
+     * @param Throwable $exception
+     * @return array
+     */
+    protected function getExtendData(Throwable $exception)
+    {
+        $data = [];
+
+        if ($exception instanceof \Enna\Framework\Exception) {
+            $data = $exception->getData();
+        }
+
+        return $data;
     }
 
 }

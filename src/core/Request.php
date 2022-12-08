@@ -285,10 +285,11 @@ class Request implements ArrayAccess
      * Note: 获取SERVER参数
      * Date: 2022-09-28
      * Time: 19:00
-     * @param string $name
-     * @param string $default
+     * @param string $name 数据名称
+     * @param string $default 默认值
+     * @return mixed
      */
-    public function server(string $name, string $default = '')
+    public function server(string $name = '', string $default = '')
     {
         if (empty($name)) {
             return $this->server;
@@ -427,6 +428,16 @@ class Request implements ArrayAccess
     public function put($name = '', $default = null, $filter = '')
     {
         return $this->input($this->put, $name, $default, $filter);
+    }
+
+    public function file()
+    {
+
+    }
+
+    public function cookie()
+    {
+
     }
 
     /**
