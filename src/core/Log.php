@@ -19,7 +19,7 @@ class Log extends Manager
     const DEBUG = 'Debug';
 
     //驱动的命名空间
-    protected $namespace = '\\Enna\\Framework\\Log\\Driver';
+    protected $namespace = '\\Enna\\Framework\\Log\\Driver\\';
 
     /**
      * Note: 获取默认驱动
@@ -129,10 +129,10 @@ class Log extends Manager
      * @param bool $lazy 是否实时写入
      * @return $this
      */
-    public function record($msg, string $type = 'info', array $context, bool $lazy = true)
+    public function record($msg, string $type = 'info', array $context = [], bool $lazy = true)
     {
         $channel = $this->getConfig('type_channel.' . $type);
-        
+
         $this->channel($channel)->record($msg, $type, $context, $lazy);
 
         return $this;
@@ -153,5 +153,41 @@ class Log extends Manager
         $allow = array_merge($this->getConfig('level', []), $this->getChannelConfig($name, 'level', []));
 
         return new Channel($name, $driver, $allow, $lazy, $this->app->event);
+    }
+
+    /**
+     * Note: 保存日志信息
+     * Date: 2022-12-09
+     * Time: 16:50
+     * @return bool
+     */
+    public function save()
+    {
+        /**
+         * @var Channel $channel
+         */
+        foreach ($this->drivers as $channel) {
+            $channel->save();
+        }
+
+        return true;
+    }
+
+    /**
+     * Note: 记录日志信息
+     * Date: 2022-12-09
+     * Time: 17:08
+     * @param string $level 日志级别
+     * @param mixed $message 日志信息
+     * @param array $context 上下文内容
+     */
+    public function log($level, $message, array $context = [])
+    {
+        $this->record($message, $level, $context);
+    }
+
+    public function __call($method, $arguments)
+    {
+        $this->log($method, ...$arguments);
     }
 }

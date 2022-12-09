@@ -23,6 +23,8 @@ class Event
     protected $bind = [
         'AppInit' => event\AppInit::class,
         'HttpRun' => event\HttpRun::class,
+        'LogWrite' => event\LogWrite::class,
+        'LogRecord' => event\LogRecord::class,
     ];
 
     /**
@@ -142,6 +144,10 @@ class Event
      */
     public function trigger($event)
     {
+        if (is_object($event)) {
+            $event  = get_class($event);
+        }
+
         if (isset($this->bind[$event])) {
             $event = $this->bind[$event];
         }

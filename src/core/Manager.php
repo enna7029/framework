@@ -19,6 +19,12 @@ abstract class Manager
      */
     protected $drivers = [];
 
+    /**
+     * 驱动的命名空间
+     * @var null
+     */
+    protected $namespace = null;
+
     public function __construct(App $app)
     {
         $this->app = $app;

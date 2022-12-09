@@ -63,7 +63,7 @@ class File implements LogHandlerInterface
                     $msg = var_export($msg, true);
                 }
 
-                $message[] = $this->config['json'] ? json_encode([$time, $type, $msg], $this->config['json_options']) ? sprintf($this->config['format'], $time, $type, $msg);
+                $message[] = $this->config['json'] ? json_encode([$time, $type, $msg], $this->config['json_options']) : sprintf($this->config['format'], $time, $type, $msg);
             }
 
             if ($this->config['apart_level'] === true || in_array($type, $this->config['apart_level'])) {

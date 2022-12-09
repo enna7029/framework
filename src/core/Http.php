@@ -173,4 +173,16 @@ class Http
         return $this->routePath;
     }
 
+    /**
+     * Note: http请求的结束
+     * Date: 2022-12-09
+     * Time: 16:44
+     * @param Response $response
+     * @return void
+     */
+    public function end(Response $response)
+    {
+        $this->app->log->save();
+    }
+
 }

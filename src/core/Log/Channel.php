@@ -8,7 +8,7 @@ use Enna\Framework\Event;
 use Enna\Framework\Event\LogRecord;
 use Enna\Framework\Event\LogWrite;
 
-class Channel implements LoggerInterface
+class Channel
 {
     /**
      * 渠道名称
@@ -119,10 +119,10 @@ class Channel implements LoggerInterface
     public function save()
     {
         $log = $this->log;
-        if ($this->event) {
-            $event = new LogWrite($name, $log);
-            $this->event->trigger($event);
-        }
+//        if ($this->event) {
+//            $event = new LogWrite($name, $log);
+//            $this->event->trigger($event);
+//        }
 
         if ($this->logger->save($log)) {
             $this->clear();
