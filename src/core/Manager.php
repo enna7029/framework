@@ -122,8 +122,34 @@ abstract class Manager
         $class = $this->resolveClass($type);
         //获取驱动配置
         $config = $this->resolveConfig($name);
+
         //实例化驱动
         return $this->app->invokeClass($class, [$config]);
+    }
+
+    /**
+     * Note: 移除一个驱动实例
+     * Date: 2022-12-21
+     * Time: 16:57
+     * @param array|null|string $name 驱动名称
+     * @return $this
+     */
+    public function forgetDriver($name = nul)
+    {
+        $name = $name ?: $this->getDefaultDriver();
+
+        foreach ((array)$name as $tmp_name) {
+            if (isset($this->drivers[$tmp_name])) {
+                unset($this->drivers[$tmp_name]);
+            }
+        }
+
+        return $this;
+    }
+
+    public function __call($method, $args)
+    {
+        return $this->driver()->$method(...$args);
     }
 
 }

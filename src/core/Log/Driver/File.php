@@ -12,14 +12,23 @@ class File implements LogHandlerInterface
      * @var array
      */
     protected $config = [
+        //日期格式
         'time_format' => 'Y-m-d H:i:s',
+        //单日志文件
         'single' => false,
+        //文件大小
         'file_size' => 2097152,
+        //路径
         'path' => '',
+        //独立日志
         'apart_level' => [],
+        //最多文件
         'max_files' => 0,
+        //是否JSON格式
         'json' => false,
+        //JSON格式二进制掩码
         'json_options' => JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+        //日志格式
         'format' => '[%s][%s] %s'
     ];
 

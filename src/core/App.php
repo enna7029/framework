@@ -117,6 +117,7 @@ class App extends Container
         'log' => Log::class,
         'middleware' => Middleware::class,
         'route' => Route::class,
+        'cache' => Cache::class,
     ];
 
     /**

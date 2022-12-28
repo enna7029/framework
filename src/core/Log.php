@@ -5,7 +5,8 @@ namespace Enna\Framework;
 
 use Enna\Framework\Log\Channel;
 use Enna\Framework\Log\ChannelSet;
-use http\Exception\InvalidArgumentException;
+use InvalidArgumentException;
+use Psr\Log\LoggerInterface;
 
 class Log extends Manager
 {
@@ -180,11 +181,117 @@ class Log extends Manager
      * @param string $level 日志级别
      * @param mixed $message 日志信息
      * @param array $context 上下文内容
+     * @return void
      */
     public function log($level, $message, array $context = [])
     {
         $this->record($message, $level, $context);
     }
+
+    /**
+     * Note: 记录emergency信息
+     * Date: 2022-12-23
+     * Time: 14:27
+     * @param string|\Stringable $message 日志信息
+     * @param array $context 上下文内容
+     * @return void
+     */
+    public function emergency($message, array $context = [])
+    {
+        $this->log(__FUNCTION__, $message, $context);
+    }
+
+    /**
+     * Note: 记录alert信息
+     * Date: 2022-12-23
+     * Time: 14:30
+     * @param string|\Stringable $message 日志信息
+     * @param array $context 上下文内容
+     * @return void
+     */
+    public function alert($message, array $context = [])
+    {
+        $this->log(__FUNCTION__, $message, $context);
+    }
+
+    /**
+     * Note: 记录critical信息
+     * Date: 2022-12-23
+     * Time: 14:31
+     * @param string|\Stringable $message 日志信息
+     * @param array $context 上下文内容
+     * @return void
+     */
+    public function critical($message, array $context = [])
+    {
+        $this->log(__FUNCTION__, $message, $context);
+    }
+
+    /**
+     * Note: 记录error信息
+     * Date: 2022-12-23
+     * Time: 14:45
+     * @param string|\Stringable $message 日志信息
+     * @param array $context 上下文内容
+     * @return void
+     */
+    public function error($message, array $context = [])
+    {
+        $this->log(__FUNCTION__, $message, $context);
+    }
+
+    /**
+     * Note: 记录warning信息
+     * Date: 2022-12-23
+     * Time: 14:46
+     * @param string|\Stringable $message 日志内容
+     * @param array $context 上下文内容
+     * @return void
+     */
+    public function warning($message, array $context = [])
+    {
+        $this->log(__FUNCTION__, $message, $context);
+    }
+
+    /**
+     * Note: 记录notice信息
+     * Date: 2022-12-23
+     * Time: 14:47
+     * @param string|\Stringable $message 日志内容
+     * @param array $context 上下文信息
+     * @return void
+     */
+    public function notice($message, array $context = [])
+    {
+        $this->log(__FUNCTION__, $message, $context);
+    }
+
+    /**
+     * Note: 记录info信息
+     * Date: 2022-12-23
+     * Time: 14:47
+     * @param string|\Stringable $message 日志内容
+     * @param array $context 上下文信息
+     * @return void
+     */
+    public function info($message, array $context = [])
+    {
+        $this->log(__FUNCTION__, $message, $context);
+    }
+
+    /**
+     * Note: 记录debug信息
+     * Date: 2022-12-23
+     * Time: 14:49
+     * @param string|\Stringable $message 日志内容
+     * @param array $context 上下文信息
+     * @return void
+     */
+    public function debug($message, array $context = [])
+    {
+        $this->log(__FUNCTION__, $message, $context);
+    }
+
 
     public function __call($method, $arguments)
     {
