@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Enna\Framework;
 
-use http\Exception\InvalidArgumentException;
+use InvalidArgumentException;
 
 abstract class Manager
 {
@@ -73,6 +73,7 @@ abstract class Manager
                 return $class;
             }
         }
+
 
         throw new InvalidArgumentException('驱动【' . $type . '】未找到');
     }

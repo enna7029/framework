@@ -63,10 +63,10 @@ abstract class Driver implements CacheHandlerInterface
      * Note: 获取缓存标识
      * Date: 2022-12-27
      * Time: 14:40
-     * @param $name
+     * @param string $name 缓存变量名
      * @return string
      */
-    public function getCacheKey($name)
+    public function getCacheKey(string $name)
     {
         return $this->options['prefix'] . $name;
     }
