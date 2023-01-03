@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace Enna\Framework\Initializer;
 
+use Enna\Framework\Exception\ErrorException;
 use Enna\Framework\App;
-use ErrorException;
 use Throwable;
 use Enna\Framework\Exception\Handle;
 
@@ -60,6 +60,7 @@ class Error
 
         } else {
             $handler->render($this->app->request, $e)->send();
+            $this->app->log->save();
         }
     }
 

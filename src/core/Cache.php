@@ -220,6 +220,6 @@ class Cache extends Manager
      */
     public function tag($name)
     {
-        return $this->store()->tag();
+        return $this->store()->tag($name);
     }
 }

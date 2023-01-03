@@ -5,6 +5,7 @@ namespace Enna\Framework\Facade;
 
 use Enna\Framework\Cache\Driver;
 use Enna\Framework\Facade;
+use http\Message\Body;
 
 /**
  * Class Cache

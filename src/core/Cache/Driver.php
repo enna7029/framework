@@ -136,7 +136,7 @@ abstract class Driver implements CacheHandlerInterface
      * Date: 2022-12-27
      * Time: 15:54
      * @param string|array $name 标签名
-     * @return
+     * @return TagSet
      */
     public function tag($name)
     {
@@ -159,7 +159,7 @@ abstract class Driver implements CacheHandlerInterface
      */
     public function getTagItems(string $tag)
     {
-        $name = $this->getTagItems($tag);
+        $name = $this->getTagKey($tag);
 
         return $this->get($name, []);
     }

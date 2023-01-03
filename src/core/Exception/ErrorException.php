@@ -20,7 +20,7 @@ class ErrorException extends Exception
      * @param string $file 文件
      * @param int $line 行数
      */
-    public function __construct(int $serverity, string $message = "", string $file, int $line)
+    public function __construct(int $serverity, string $message, string $file, int $line)
     {
         $this->severity = $serverity;
         $this->message = $message;

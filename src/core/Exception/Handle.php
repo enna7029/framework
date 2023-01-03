@@ -1,5 +1,5 @@
 <?php
-declare(strice_types=1);
+declare(strict_types=1);
 
 namespace Enna\Framework\Exception;
 
@@ -65,7 +65,7 @@ class Handle
             }
 
             try {
-                //$this->app->log->record($log, 'error');
+                $this->app->log->record($log, 'error');
             } catch (Exception $e) {
             }
         }

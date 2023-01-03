@@ -132,6 +132,7 @@ class Log extends Manager
      */
     public function record($msg, string $type = 'info', array $context = [], bool $lazy = true)
     {
+
         $channel = $this->getConfig('type_channel.' . $type);
 
         $this->channel($channel)->record($msg, $type, $context, $lazy);
