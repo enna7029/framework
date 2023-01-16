@@ -118,6 +118,7 @@ class App extends Container
         'middleware' => Middleware::class,
         'route' => Route::class,
         'cache' => Cache::class,
+        'filesystem' => Filesystem::class,
     ];
 
     /**

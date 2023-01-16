@@ -8,6 +8,11 @@ use Enna\Framework\Cache\Driver;
 use Enna\Framework\Pipeline;
 use FilesystemIterator;
 
+/**
+ * 文件缓存驱动
+ * Class File
+ * @package Enna\Framework\Cache\Driver
+ */
 class File extends Driver
 {
     protected $options = [

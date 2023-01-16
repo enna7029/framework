@@ -214,6 +214,7 @@ class Container implements ContainerInterface, ArrayAccess
      * Time: 11:58
      * @param string $abstract
      * @param array $vars
+     * @return object
      */
     public function invokeClass(string $abstract, array $vars = [])
     {

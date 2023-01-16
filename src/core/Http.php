@@ -38,7 +38,10 @@ class Http
      */
     public function run(): Response
     {
+        //初始化
         $this->initialize();
+
+        //实例化request对象
         $request = $this->app->make('request', [], true);
         $this->app->instance('request', $request);
 

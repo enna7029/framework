@@ -20,6 +20,12 @@ abstract class Manager
     protected $drivers = [];
 
     /**
+     * 自定义驱动
+     * @var array
+     */
+    protected $customDrivers = [];
+
+    /**
      * 驱动的命名空间
      * @var null
      */
@@ -119,13 +125,53 @@ abstract class Manager
     {
         //获取驱动类型
         $type = $this->resolveType($name);
-        //获取驱动class
-        $class = $this->resolveClass($type);
+
         //获取驱动配置
         $config = $this->resolveConfig($name);
 
+        //执行自定义驱动
+        if (isset($this->customDrivers[$name])) {
+            return $this->callCustomDriver($config);
+        }
+
+        //执行指定的函数
+        $method = 'create' . ucfirst($type) . 'Driver';
+        if (method_exists($this, $method)) {
+            return $this->$method(...$config);
+        }
+
+        //获取驱动class
+        $class = $this->resolveClass($type);
+
         //实例化驱动
         return $this->app->invokeClass($class, [$config]);
+    }
+
+    /**
+     * Note: 调用自定义驱动
+     * Date: 2023-01-16
+     * Time: 14:53
+     * @param array $config
+     * @return mixed
+     */
+    public function callCustomDriver(array $config)
+    {
+        return $this->customDrivers[$config['type']]($this->app, $config);
+    }
+
+    /**
+     * Note: 注册自定义驱动
+     * Date: 2023-01-16
+     * Time: 14:55
+     * @param string $driver
+     * @param \Closure $callback
+     * @return $this
+     */
+    public function extend($driver, \Closure $callback)
+    {
+        $this->customDrivers[$driver] = $callback;
+
+        return $this;
     }
 
     /**

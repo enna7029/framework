@@ -5,6 +5,7 @@ namespace Enna\Framework;
 
 use ArrayAccess;
 use Enna\Framework\Route\Rule;
+use Enna\Framework\File\UploadFile;
 
 class Request implements ArrayAccess
 {
@@ -430,9 +431,95 @@ class Request implements ArrayAccess
         return $this->input($this->put, $name, $default, $filter);
     }
 
-    public function file()
+    /**
+     * Note: 获取上传的文件信息
+     * Date: 2023-01-06
+     * Time: 10:30
+     * @param string $name 名称
+     */
+    public function file(string $name = '')
     {
+        $files = $this->file;
+        if (!empty($files)) {
+            if (strpos($name, ',')) {
+                [$name, $sub] = explode(',', $name);
+            }
 
+            $array = $this->dealUploadFile($files, $name);
+
+            if ($name == '') {
+                return $array;
+            } elseif (isset($sub) && isset($array[$name][$sub])) {
+                return $array[$name][$sub];
+            } elseif (isset($array[$name])) {
+                return $array[$name];
+            }
+        }
+    }
+
+    /**
+     * Note: 处理上传的文件
+     * Date: 2023-01-06
+     * Time: 11:40
+     * @param array $files 文件信息
+     * @param string $name 文件名
+     * @return array
+     * @throws Exception
+     */
+    protected function dealUploadFile(array $files, string $name)
+    {
+        $array = [];
+        foreach ($files as $key => $file) {
+            if (is_array($file)) {
+                $item = [];
+
+                $keys = array_keys($file);
+                $count = count($file['name']);
+                for ($i = 0; $i < $count; $i++) {
+                    if ($file['error'][$i] > 0) {
+                        if ($name == $key) {
+                            $this->throwUploadError($file['error'][$i]);
+                        } else {
+                            continue;
+                        }
+                    }
+
+                    foreach ($keys as $temp_key) {
+                        $temp[$temp_key] = $file[$temp_key][$i];
+                    }
+
+                    $item[] = new UploadFile($temp['tmp_name'], $temp['name'], $temp['type'], $temp['error']);
+                }
+
+                $array[$key] = $item;
+            }
+        }
+
+        return $array;
+    }
+
+    /**
+     * Note: 抛出上传错误
+     * User: enna
+     * Date: 2023-01-06
+     * Time: 12:00
+     * @param int $error
+     * @throws Exception
+     */
+    protected function throwUploadError(int $error)
+    {
+        $fileUploadErrors = [
+            1 => '上传的文件超过了 php.ini 中 upload_max_filesize 选项限制的值',
+            2 => '上传文件的大小超过了 HTML 表单中 MAX_FILE_SIZE 选项指定的值',
+            3 => '文件只有部分被上传',
+            4 => '没有文件被上传',
+            6 => '找不到临时文件夹',
+            7 => '文件写入失败',
+        ];
+
+        $msg = $fileUploadErrors[$error];
+
+        throw new Exception($msg, $error);
     }
 
     public function cookie()
