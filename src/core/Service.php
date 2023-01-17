@@ -5,6 +5,7 @@ namespace Enna\Framework;
 
 /**
  * Class Service
+ * 系统服务基础类
  * @package Enna\Framework
  * @method void register()
  * @method void boot()

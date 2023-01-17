@@ -6,6 +6,7 @@ namespace Enna\Framework;
 use Enna\Framework\Event\AppInit;
 use Enna\Framework\Initializer\Error;
 use Enna\Framework\Initializer\BootService;
+use Enna\Framework\Initializer\RegisterService;
 
 /**
  * @property App $app
@@ -102,6 +103,7 @@ class App extends Container
      */
     protected $initializers = [
         Error::class,
+        RegisterService::class,
         BootService::class,
     ];
 
