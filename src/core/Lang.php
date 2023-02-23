@@ -142,4 +142,22 @@ class Lang
     {
         return $this->current_lang;
     }
+
+    /**
+     * Note: 判断是否存在语言定义
+     * Date: 2023-02-11
+     * Time: 10:26
+     * @param string $name 语言变量
+     * @param string $range 语言作用域
+     * @return bool
+     */
+    public function has(string $name, string $range = '')
+    {
+
+    }
+
+    public function get(string $name)
+    {
+        
+    }
 }

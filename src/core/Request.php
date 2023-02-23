@@ -76,7 +76,13 @@ class Request implements ArrayAccess
     protected $method;
 
     /**
-     * COOKIE参数
+     * SESSION对象
+     * @var Session
+     */
+    protected $session;
+
+    /**
+     * COOKIE数据
      * @var array
      */
     protected $cookie = [];
@@ -879,6 +885,73 @@ class Request implements ArrayAccess
         }
 
         return $root;
+    }
+
+    /**
+     * Note: 生成token
+     * Date: 2023-02-14
+     * Time: 18:22
+     * @param string $name token名称
+     * @param string|callable $type hash类型
+     * @return string
+     */
+    public function buildToken(string $name = '__token__', $type = 'md5')
+    {
+        $token = call_user_func($type, $this->server('REQUEST_TIME_FLOAT'));
+
+        $this->session->set($name, $token);
+
+        return $token;
+    }
+
+    /**
+     * Note: 验证token令牌
+     * Date: 2023-02-14
+     * Time: 17:43
+     * @param string $token token字段名
+     * @param array $data 数据
+     * @return bool
+     */
+    public function checkToken(string $token = '__token__', array $data = [])
+    {
+        if (in_array($this->method(), ['GET', 'HEAD', 'OPTIONS'], true)) {
+            return true;
+        }
+
+        if (!$this->session->has($token)) {
+            return false;
+        }
+
+        if ($this->header('X-CSRF-TOKEN') && $this->session->get($token) === $this->header('X-CSRF-TOKEN')) {
+            $this->session->delete($token);
+            return true;
+        }
+
+        if (empty($data)) {
+            $data = $this->post();
+        }
+
+        if (isset($data[$token]) && $this->session->get($token) === $data[$token]) {
+            $this->session->delete($token);
+            return true;
+        }
+
+        $this->session->delete($token);
+        return false;
+    }
+
+    /**
+     * Note: 设置Session对象
+     * Date: 2023-02-14
+     * Time: 18:06
+     * @param Session $session Session对象
+     * @return $this
+     */
+    public function withSession(Session $session)
+    {
+        $this->session = $session;
+
+        return $this;
     }
 
     public function offsetUnset($offset)

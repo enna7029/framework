@@ -121,6 +121,7 @@ class App extends Container
         'route' => Route::class,
         'cache' => Cache::class,
         'filesystem' => Filesystem::class,
+        'validate' => Validate::class,
     ];
 
     /**

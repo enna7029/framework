@@ -53,6 +53,24 @@ class Event
     }
 
     /**
+     * Note: 注册监听事件
+     * Date: 2022-09-17
+     * Time: 14:38
+     * @param string $event 时间名
+     * @param array $listener 监听操作
+     */
+    public function listen(string $event, array $listener)
+    {
+        if (isset($this->bind[$event])) {
+            $event = $this->bind[$event];
+        }
+
+        $this->listener[$event][] = $listener;
+
+        return $this;
+    }
+
+    /**
      * Note: 注册事件监听
      * Date: 2022-09-17
      * Time: 11:48
@@ -65,7 +83,7 @@ class Event
                 $event = $this->bind[$event];
             }
 
-            $this->listener[$event] = array_merge($this->listener[$event] ?: [], $listener);
+            $this->listener[$event] = array_merge(isset($this->listener[$event]) ? $this->listener[$event] : [], $listener);
         }
 
         return $this;
@@ -76,6 +94,7 @@ class Event
      * Date: 2022-09-17
      * Time: 14:05
      * @param array $events 订阅者
+     * @return $this
      */
     public function subscribe(array $events)
     {
@@ -86,13 +105,16 @@ class Event
 
             $this->observe($subscriber);
         }
+
+        return $this;
     }
 
     /**
      * Note: 订阅
      * Date: 2022-09-17
      * Time: 14:17
-     * @param $subscriber
+     * @param string|object $subscriber 观察者
+     * @return $this
      */
     public function observe($subscriber)
     {
@@ -118,34 +140,16 @@ class Event
     }
 
     /**
-     * Note: 注册监听事件
-     * Date: 2022-09-17
-     * Time: 14:38
-     * @param string $event 时间名
-     * @param array $listener 监听操作
-     */
-    public function listen(string $event, array $listener)
-    {
-        if (isset($this->bind[$event])) {
-            $event = $this->bind[$event];
-        }
-
-        $this->listener[$event][] = $listener;
-
-        return $this;
-    }
-
-    /**
      * Note: 触发事件
      * Date: 2022-09-19
      * Time: 16:42
-     * @param string|object $event
+     * @param string $event 事件名
      * @return mixed
      */
     public function trigger($event)
     {
         if (is_object($event)) {
-            $event  = get_class($event);
+            $event = get_class($event);
         }
 
         if (isset($this->bind[$event])) {
@@ -166,6 +170,7 @@ class Event
      * Date: 2022-09-19
      * Time: 17:44
      * @param string $event 事件
+     * @return mixed
      */
     protected function dispatch(string $event)
     {
