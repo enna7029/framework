@@ -146,6 +146,12 @@ class Request implements ArrayAccess
     protected $env;
 
     /**
+     * 全局过滤规则
+     * @var array
+     */
+    protected $filter;
+
+    /**
      * php://input内容
      * @var string
      */
@@ -528,9 +534,165 @@ class Request implements ArrayAccess
         throw new Exception($msg, $error);
     }
 
-    public function cookie()
+    /**
+     * Note: 获取Cookie数据
+     * Date: 2023-02-28
+     * Time: 14:04
+     * @param string $name cookie名称
+     * @param mixed $default cookie默认值
+     * @param string $fiter 过滤方法
+     * @return mixed
+     */
+    public function cookie(string $name, $default = null, $fiter = '')
     {
+        if (!empty($name)) {
+            $data = $this->getData($this->cookie, $name, $default);
+        } else {
+            $data = $this->cookie;
+        }
 
+        $filter = $this->getFilter($filter, $default);
+
+        if (is_array($data)) {
+            array_walk_recursive($data, [$this, 'filterValue'], $fiter);
+        } else {
+            $this->filterValue($data, $name, $fiter);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Note: 获取数据
+     * Date: 2023-02-28
+     * Time: 14:09
+     * @param array $data 数据源
+     * @param string $name 名称
+     * @param mixed $default 默认值
+     * @return mixed
+     */
+    protected function getData(array $data, string $name, $default = null)
+    {
+        foreach (explode('.', $name) as $val) {
+            if (isset($data[$val])) {
+                $data = $data[$val];
+            } else {
+                $data = $default;
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Note: 设置全局过滤规则
+     * Date: 2023-02-28
+     * Time: 14:27
+     * @param mixed $filter 过滤规则
+     * @return $this|array
+     */
+    public function filter($filter = null)
+    {
+        if (is_null($filter)) {
+            return $this->filter;
+        }
+
+        $this->filter = $filter;
+
+        return $this;
+    }
+
+    /**
+     * Note: 解析过滤器
+     * Date: 2023-02-28
+     * Time: 17:53
+     * @param mixed $filter 过滤器:函数,正则,filter_id
+     * @param mixed $default 默认值
+     * @return array
+     */
+    public function getFilter(string $filter, $default)
+    {
+        if (is_null($filter)) {
+            $filter = [];
+        } else {
+            $filter = $filter ?: $this->filter;
+            if (is_string($filter) && strpos($filter, '/') !== false) {
+                $filter = explode(',', $filter);
+            } else {
+                $filter = (array)$filter;
+            }
+        }
+
+        $filter[] = $default;
+
+        return $filter;
+    }
+
+    /**
+     * Note: 获取过滤后的值
+     * Date: 2023-02-28
+     * Time: 17:58
+     * @param mixed $value 过滤前的值
+     * @param mixed $name 过滤的值的名称
+     * @param array $filters 过滤方法+默认值
+     * @return mixed
+     */
+    public function filterValue(&$value, $name, $filters)
+    {
+        $default = array_pop($filters);
+
+        foreach ($filters as $filter) {
+            if (is_callable($filter)) {
+                $value = call_user_func($filter, $value);
+            } else {
+                if (is_string($filter) && strpos($filter, '/') !== false) {
+                    if (!preg_match($filter, $value)) {
+                        $value = $default;
+                        break;
+                    }
+                } elseif (!empty($filter)) {
+                    $value = filter_var($value, is_int($filter) ? $filter : filter_id($filter));
+                    if ($value === false) {
+                        $value = $default;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * Note: 检查是否存在某个请求参数
+     * Date: 2023-02-28
+     * Time: 11:37
+     * @param string $name 变量名
+     * @param string $type 变量类型
+     * @param bool $checkEmpty 是否检查空值
+     * @return bool
+     */
+    public function has(string $name, string $type = 'param', bool $checkEmpty = false)
+    {
+        if (!in_array($type, ['param,get,post,put,delete,header,server,request,file,cookie,session,env,route'])) {
+            return false;
+        }
+
+        $param = empty($this->$type) ? $this->$type() : $this->$type;
+
+        foreach (explode(',', $param) as $val) {
+            if (isset($param[$val])) {
+                $param = $param[$val];
+            } else {
+                return false;
+            }
+        }
+
+        if ($param === '' && $checkEmpty) {
+            return false;
+        } else {
+            return true;
+        }
     }
 
     /**

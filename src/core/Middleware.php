@@ -109,6 +109,11 @@ class Middleware
             throw new \InvalidArgumentException('The middleware is invalid');
         }
 
+        $alias = $this->app->config->get('middleware.alias', []);
+        if (isset($alias[$middleware])) {
+            $middleware = $alias[$middleware];
+        }
+
         if (is_array($middleware)) {
             $this->add($middleware, $type);
             return [];

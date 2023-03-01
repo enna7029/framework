@@ -122,6 +122,8 @@ class App extends Container
         'cache' => Cache::class,
         'filesystem' => Filesystem::class,
         'validate' => Validate::class,
+        'lang' => Lang::class,
+        'cookie' => Cookie::class,
     ];
 
     /**
@@ -178,8 +180,12 @@ class App extends Container
         //加载全局初始化文件
         $this->load();
 
-        //加载语言包
-        $this->loadLangPack();
+        //加载框架默认语言包
+        $default_lang = $this->lang->defaultLang();
+        $this->lang->load($this->corePath . 'lang' . DIRECTORY_SEPARATOR . $default_lang . '.php');
+
+        //加载应用默认语言包
+        $this->loadLangPack($default_lang);
 
         //监听AppInit
         $this->event->trigger(AppInit::class);
@@ -284,11 +290,24 @@ class App extends Container
      * Note: 加载语言包
      * Date: 2022-09-17
      * Time: 15:34
+     * @param string $lang 语言
+     * @return void
      */
-    public function loadLangPack()
+    public function loadLangPack($lang)
     {
-        $lang = $this->lang->defaultLang();
-        $this->lang->loadLang($lang);
+        if (empty($lang)) {
+            return;
+        }
+
+        //加载应用语言包
+        $files = glob($this->appPath . 'lang' . DIRECTORY_SEPARATOR . $lang . '.*');
+        $this->lang->load($files);
+
+        //加载扩展语言包
+        $list = $this->config->get('lang.extend_list', []);
+        if (isset($list[$lang])) {
+            $this->lang->load($list[$lang]);
+        }
     }
 
     /**

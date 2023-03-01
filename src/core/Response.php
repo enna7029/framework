@@ -138,6 +138,22 @@ abstract class Response
     }
 
     /**
+     * Note: 设置cookie
+     * Date: 2023-02-28
+     * Time: 11:00
+     * @param string $name cookie名称
+     * @param string $value cookie值
+     * @param mixed $option 选项
+     * @return $this
+     */
+    public function cookie(string $name, string $value, $option = null)
+    {
+        $this->cookie->set();
+
+        return $this;
+    }
+
+    /**
      * Note: 发送数据到客户端
      * Date: 2022-10-08
      * Time: 17:42

@@ -280,7 +280,7 @@ class Container implements ContainerInterface, ArrayAccess
     }
 
     /**
-     * Note:
+     * Note: 执行对象参数
      * Date: 2022-09-14
      * Time: 11:42
      * @param string $className 类型
