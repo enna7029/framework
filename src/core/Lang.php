@@ -91,7 +91,7 @@ class Lang
      * @param string $lang 语言作用域
      * @return array
      */
-    public function load(array $file, $lang = '')
+    public function load($file, $lang = '')
     {
         $range = $lang ?: $this->range;
         if (!isset($this->lang[$range])) {

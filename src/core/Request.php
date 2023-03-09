@@ -543,7 +543,7 @@ class Request implements ArrayAccess
      * @param string $fiter 过滤方法
      * @return mixed
      */
-    public function cookie(string $name, $default = null, $fiter = '')
+    public function cookie(string $name = '', $default = null, $filter = '')
     {
         if (!empty($name)) {
             $data = $this->getData($this->cookie, $name, $default);
@@ -554,9 +554,9 @@ class Request implements ArrayAccess
         $filter = $this->getFilter($filter, $default);
 
         if (is_array($data)) {
-            array_walk_recursive($data, [$this, 'filterValue'], $fiter);
+            array_walk_recursive($data, [$this, 'filterValue'], $filter);
         } else {
-            $this->filterValue($data, $name, $fiter);
+            $this->filterValue($data, $name, $filter);
         }
 
         return $data;
@@ -764,25 +764,6 @@ class Request implements ArrayAccess
     }
 
     /**
-     * Note: 获取数据
-     * Date: 2022-09-30
-     * Time: 16:28
-     * @param array $data
-     * @param string $name
-     * @param null $default
-     * @return mixed
-     */
-    protected function getData(array $data, string $name, $default = null)
-    {
-        if (isset($data[$name])) {
-            $data = $data[$name];
-        } else {
-            $data = $default;
-        }
-        return $data;
-    }
-
-    /**
      * Note: 过滤数据
      * Date: 2022-09-30
      * Time: 17:20
@@ -815,35 +796,6 @@ class Request implements ArrayAccess
         return $data;
     }
 
-    /**
-     * Note: 递归过滤给定的值
-     * Date: 2022-09-30
-     * Time: 17:31
-     * @param mixed $value 键值
-     * @param mixed $key 键名
-     * @param array $filters 过滤方法+默认值
-     */
-    protected function filterValue(&$value, $key, $filters)
-    {
-        $default = array_pop($filter);
-
-        foreach ($filters as $filter) {
-            if (is_callable($filters)) {
-                if (is_null($value)) {
-                    continue;
-                }
-            }
-
-            $value = call_user_func($filter, $value);
-        }
-
-        if (empty($value)) {
-            $value = $default;
-        }
-
-        return $value;
-
-    }
 
     /**
      * Note: 强制类型转换

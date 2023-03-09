@@ -7,6 +7,7 @@ use Enna\Framework\Event\AppInit;
 use Enna\Framework\Exception\Handle;
 use Throwable;
 use Enna\Framework\Event\HttpRun;
+use Enna\Framework\Event\HttpEnd;
 use Enna\Framework\Event\RouteLoaded;
 
 class Http
@@ -160,8 +161,8 @@ class Http
      */
     protected function loadMiddleware(): void
     {
-        if (is_file($this->app->getCorePath() . 'middleware.php')) {
-            $this->app->middleware->import(include $this->app->getCorePath() . 'middleware.php');
+        if (is_file($this->app->getAppPath() . 'middleware.php')) {
+            $this->app->middleware->import(include $this->app->getAppPath() . 'middleware.php');
         }
     }
 
@@ -185,6 +186,10 @@ class Http
      */
     public function end(Response $response)
     {
+        $this->app->event->trigger(HttpEnd::class, $response);
+
+        $this->app->middleware->end($response);
+
         $this->app->log->save();
     }
 

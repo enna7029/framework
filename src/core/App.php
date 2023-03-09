@@ -20,6 +20,11 @@ use Enna\Framework\Initializer\RegisterService;
  * @property Log $log
  * @property Middleware $middleware
  * @property Route $route
+ * @property Cache $cache
+ * @property File $file
+ * @property Validate $validate
+ * @property Cookie $cookie
+ * @property Session $session
  */
 class App extends Container
 {
@@ -124,6 +129,7 @@ class App extends Container
         'validate' => Validate::class,
         'lang' => Lang::class,
         'cookie' => Cookie::class,
+        'session' => Session::class,
     ];
 
     /**

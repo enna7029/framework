@@ -212,4 +212,25 @@ class Middleware
         }
         return -1;
     }
+
+    /**
+     * Note: 结束中间件调度
+     * Date: 2023-03-01
+     * Time: 14:15
+     * @param Response $response
+     */
+    public function end(Response $response)
+    {
+        foreach ($this->queue as $queue) {
+            foreach ($queue as $middleware) {
+                [$call] = $middleware;
+                if (is_array($call) && is_string($call[0])) {
+                    $instance = $this->app->make($call[0]);
+                    if (method_exists($instance, 'end')) {
+                        $instance->end($response);
+                    }
+                }
+            }
+        }
+    }
 }

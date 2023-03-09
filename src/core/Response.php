@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace Enna\Framework;
 
-use SebastianBergmann\Type\MixedType;
-
 abstract class Response
 {
     /**
@@ -48,6 +46,12 @@ abstract class Response
      * @var Cookie
      */
     protected $cookie;
+
+    /**
+     * session对象
+     * @var Session
+     */
+    protected $session;
 
     /**
      * Note: 初始化
@@ -150,6 +154,19 @@ abstract class Response
     {
         $this->cookie->set();
 
+        return $this;
+    }
+
+    /**
+     * Note: 设置Session对象
+     * Date: 2023-03-08
+     * Time: 15:02
+     * @param Session $session
+     * @return $this
+     */
+    public function setSession(Session $session)
+    {
+        $this->session = $session;
         return $this;
     }
 

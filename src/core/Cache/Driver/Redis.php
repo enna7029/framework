@@ -131,7 +131,7 @@ class Redis extends Driver
         $value = $this->handler->get($name);
 
         if (is_null($value) || $value == false) {
-            $value = $default;
+            return $default;
         }
 
         return $this->unserialize($value);

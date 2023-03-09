@@ -51,7 +51,10 @@ abstract class Manager
      * @param string $name 驱动名称
      * @return mixed
      */
-    abstract function resolveType(string $name);
+    protected function resolveType(string $name)
+    {
+        return $name;
+    }
 
     /**
      * Note: 获取驱动配置
@@ -60,7 +63,24 @@ abstract class Manager
      * @param string $name 驱动名称
      * @return mixed
      */
-    abstract function resolveConfig(string $name);
+    protected function resolveConfig(string $name)
+    {
+        return $name;
+    }
+
+
+    /**
+     * Note: 获取驱动参数
+     * Date: 2022-12-07
+     * Time: 10:10
+     * @param string $name 驱动名称
+     * @return mixed
+     */
+    protected function resolveParams($name): array
+    {
+        $config = $this->resolveConfig($name);
+        return $config;
+    }
 
     /**
      * Note: 获取驱动类
@@ -127,7 +147,7 @@ abstract class Manager
         $type = $this->resolveType($name);
 
         //获取驱动配置
-        $config = $this->resolveConfig($name);
+        $config = $this->resolveParams($name);
 
         //执行自定义驱动
         if (isset($this->customDrivers[$name])) {
