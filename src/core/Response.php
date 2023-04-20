@@ -54,6 +54,18 @@ abstract class Response
     protected $session;
 
     /**
+     * 是否允许请求缓存
+     * @var bool
+     */
+    protected $allowCache;
+
+    /**
+     * 输出参数
+     * @var array
+     */
+    protected $options = [];
+
+    /**
      * Note: 初始化
      * Date: 2022-10-08
      * Time: 17:31
@@ -66,6 +78,22 @@ abstract class Response
         $this->code = $code;
 
         $this->contentType($this->contentType, $this->charset);
+    }
+
+    /**
+     * Note: 创建Response对象
+     * Date: 2022-09-30
+     * Time: 10:56
+     * @param mixed $data 输出信息
+     * @param string $type 输出类型
+     * @param int $code 状态码
+     * @return Response
+     */
+    public static function create($data = '', string $type = 'html', int $code = 200): Response
+    {
+        $class = '\\Enna\\Framework\\Response\\' . ucfirst(strtolower($type));
+
+        return Container::getInstance()->invokeClass($class, [$data, $code]);
     }
 
     /**
@@ -95,22 +123,6 @@ abstract class Response
         $this->header['Content-Type'] = $contentType . '; charset=' . $charset;
 
         return $this;
-    }
-
-    /**
-     * Note: 创建Response对象
-     * Date: 2022-09-30
-     * Time: 10:56
-     * @param mixed $data 输出信息
-     * @param string $type 输出类型
-     * @param int $code 状态码
-     * @return Response
-     */
-    public static function create($data = '', string $type = 'html', int $code = 200): Response
-    {
-        $class = '\\Enna\\Framework\\Response\\' . ucfirst(strtolower($type));
-
-        return Container::getInstance()->invokeClass($class, [$data, $code]);
     }
 
     /**
@@ -241,5 +253,47 @@ abstract class Response
     protected function sendData(string $data)
     {
         echo $data;
+    }
+
+    /**
+     * Note: 是否允许缓存
+     * Date: 2023-03-13
+     * Time: 16:37
+     * @param bool $cache 输出缓存
+     * @return $this
+     */
+    public function allowCache(bool $cache)
+    {
+        $this->allowCache = $cache;
+
+        return $this;
+    }
+
+    /**
+     * Note: 设置header修改时间
+     * Date: 2023-03-13
+     * Time: 16:40
+     * @param string $time GMT格式时间
+     * @return $this
+     */
+    public function lastModified(string $time)
+    {
+        $this->header['Last-Modified'] = $time;
+
+        return $this;
+    }
+
+    /**
+     * Note: 页面缓存控制
+     * Date: 2023-03-13
+     * Time: 16:43
+     * @param string $cache 状态码
+     * @return $this
+     */
+    public function cacheControl(string $cache)
+    {
+        $this->header['Cache-control'] = $cache;
+
+        return $this;
     }
 }

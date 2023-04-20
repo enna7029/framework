@@ -112,6 +112,18 @@ class Request implements ArrayAccess
     protected $subDomain;
 
     /**
+     * 当前URL地址
+     * @var string
+     */
+    protected $url;
+
+    /**
+     * 基础URL
+     * @var string
+     */
+    protected $baseUrl;
+
+    /**
      * server信息
      * @var array
      */
@@ -1066,6 +1078,57 @@ class Request implements ArrayAccess
         $this->session = $session;
 
         return $this;
+    }
+
+    public function setUrl()
+    {
+
+    }
+
+    public function url()
+    {
+
+    }
+
+    public function setDomain()
+    {
+
+    }
+
+    public function domain()
+    {
+
+    }
+
+    /**
+     * Note: 设置当前URL  不含QUERY_STRING
+     * Date: 2023-04-18
+     * Time: 15:35
+     * @param string $url URL地址
+     * @return $this
+     */
+    public function setBaseUrl(string $url)
+    {
+        $this->baseUrl = $url;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取当前URL 不含QUERY_STRING
+     * Date: 2023-04-18
+     * Time: 15:33
+     * @param bool $complete 是否包含完整域名
+     * @return string
+     */
+    public function baseUrl(bool $complete = false)
+    {
+        if (!$this->baseUrl) {
+            $str = $this->url();
+            $this->baseUrl = strpos($str, '?') ? strstr($str, '?', true) : $str;
+        }
+
+        return $complete ? $this->domain() . $this->baseUrl : $this->baseUrl;
     }
 
     public function offsetUnset($offset)

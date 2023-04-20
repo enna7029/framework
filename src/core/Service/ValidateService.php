@@ -12,7 +12,7 @@ class ValidateService extends Service
     {
         Validate::maker(function (Validate $validate) {
             $validate->setLang($this->app->lang);
-            //$validate->setDb($this->app->db);
+            $validate->setDb($this->app->db);
             $validate->setRequest($this->app->request);
         });
     }

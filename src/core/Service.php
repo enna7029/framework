@@ -18,4 +18,13 @@ abstract class Service
     {
         $this->app = $app;
     }
+
+    protected function commands($commands)
+    {
+        $commands = is_array($commands) ? $commands : func_get_args();
+
+        Console::starting(function (Console $console) use ($commands) {
+            $console->addCommands($commands);
+        });
+    }
 }

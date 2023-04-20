@@ -112,6 +112,10 @@ class App extends Container
         BootService::class,
     ];
 
+    /**
+     * 容器绑定标识
+     * @var array
+     */
     protected $bind = [
         'app' => App::class,
         'http' => Http::class,
@@ -130,6 +134,8 @@ class App extends Container
         'lang' => Lang::class,
         'cookie' => Cookie::class,
         'session' => Session::class,
+        'db' => Db::class,
+        'Enna\Orn\DbManager' => Db::class,
     ];
 
     /**

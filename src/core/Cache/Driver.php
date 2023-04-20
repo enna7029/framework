@@ -6,12 +6,13 @@ namespace Enna\Framework\Cache;
 use Enna\Framework\Container;
 use Enna\Framework\Contract\CacheHandlerInterface;
 use http\Exception\InvalidArgumentException;
+use Psr\SimpleCache\CacheInterface;
 use SebastianBergmann\FileIterator\Iterator;
 use Exception;
 use Throwable;
 use Closure;
 
-abstract class Driver implements CacheHandlerInterface
+abstract class Driver implements CacheInterface, CacheHandlerInterface
 {
     /**
      * 驱动句柄
@@ -47,13 +48,15 @@ abstract class Driver implements CacheHandlerInterface
      * Note: 获取有效期
      * Date: 2022-12-24
      * Time: 15:01
-     * @param int|\DateTimeInterface $expire 有效期
+     * @param int|\DateTimeInterface|\DateInterval $expire 有效期
      * @return int
      */
     protected function getExpireTime($expire)
     {
         if ($expire instanceof \DateTimeInterface) {
             $expire = $expire->getTimestamp() - time();
+        } elseif ($expire instanceof \DateInterval) {
+            $expire = \DateTime::createFromFormat('U', (string)time())->add($expire)->format('U')->time();
         }
 
         return (int)$expire;

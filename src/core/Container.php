@@ -5,6 +5,8 @@ namespace Enna\Framework;
 
 use Closure;
 use ArrayAccess;
+use IteratorAggregate;
+use Countable;
 use InvalidArgumentException;
 use ReflectionFunction;
 use ReflectionMethod;
@@ -15,7 +17,7 @@ use Enna\Framework\Exception\ClassNotFoundException;
 use Enna\Framework\Exception\FuncNotFoundException;
 use Psr\Container\ContainerInterface;
 
-class Container implements ContainerInterface, ArrayAccess
+class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, Countable
 {
     /**
      * 容器对象实例
@@ -28,6 +30,18 @@ class Container implements ContainerInterface, ArrayAccess
      * @var array
      */
     protected $instances = [];
+
+    /**
+     * 容器绑定标识
+     * @var array
+     */
+    protected $bind = [];
+
+    /**
+     * 容器回调
+     * @var array
+     */
+    protected $invokeCallback = [];
 
     /**
      * Note: 获取当前容器的实例(单例)
@@ -365,6 +379,98 @@ class Container implements ContainerInterface, ArrayAccess
         return isset($this->bind[$abstract]) || isset($this->instances[$abstract]);
     }
 
+    /**
+     * Note: 判断容器中是否存在对象实例
+     * Date: 2023-04-18
+     * Time: 16:52
+     * @param string $abstract 类名或标识
+     * @return bool
+     */
+    public function exists(string $abstract)
+    {
+        $abstract = $this->getAlias($abstract);
+
+        return isset($this->instances[$abstract]);
+    }
+
+    /**
+     * Note: 获取容器中的对象实例,不存在则创建
+     * Date: 2023-04-18
+     * Time: 16:54
+     * @param string $abstract 类名或标识
+     * @param array $vars 变量
+     * @param bool $newInstance 是否每次创建新的实例
+     * @return object
+     */
+    public function pull(string $abstract, array $vars = [], bool $newInstance = false)
+    {
+        return static::getInstance()->make($abstract, $vars, $newInstance);
+    }
+
+    /**
+     * Note: 删除容器中的对象实例
+     * Date: 2023-04-18
+     * Time: 16:56
+     * @param string $name 类名或标识
+     * @return void
+     */
+    public function delete($name)
+    {
+        $name = $this->getAlias($name);
+
+        if (isset($this->instances[$name])) {
+            unset($this->instances[$name]);
+        }
+    }
+
+    /**
+     * Note: 注册一个容器对象回调
+     * Date: 2023-04-18
+     * Time: 17:06
+     * @param string|Closure $abstract 容器对象实例或者闭包
+     * @param Closure|null $callback 闭包
+     * @return void
+     */
+    public function resolving($abstract, Closure $callback = null)
+    {
+        if ($abstract instanceof Closure) {
+            $this->invokeCallback['*'] = $abstract;
+            return;
+        }
+
+        $abstract = $this->getAlias($abstract);
+
+        $this->invokeCallback[$abstract][] = $callback;
+    }
+
+    /**
+     * Note: 执行invokeClass回调
+     * Date: 2023-04-18
+     * Time: 17:19
+     * @param string $class 对象类名
+     * @param object $object 对象容器实例
+     * @return void
+     */
+    public function invokeAfter(string $class, $object)
+    {
+        if (isset($this->invokeCallback['*'])) {
+            foreach ($this->invokeCallback['*'] as $callback) {
+                $callback($object, $this);
+            }
+        }
+
+        if (isset($this->invokeCallback[$class])) {
+            foreach ($this->invokeCallback[$class] as $callback) {
+                $callback($class, $this);
+            }
+        }
+    }
+
+    public function __set($name, $value)
+    {
+        return $this->bind($name, $value);
+    }
+
     public function __get($name)
     {
         return $this->get($name);
@@ -372,31 +478,41 @@ class Container implements ContainerInterface, ArrayAccess
 
     public function __isset($name)
     {
-        // TODO: Implement __isset() method.
+        return $this->exists($name);
     }
 
     public function __unset($name)
     {
-        // TODO: Implement __unset() method.
+        $this->delete($name);
     }
 
     public function offsetExists($offset)
     {
-        // TODO: Implement offsetExists() method.
+        return $this->exists($offset);
     }
 
     public function offsetGet($offset)
     {
-        // TODO: Implement offsetGet() method.
+        return $this->make($offset);
     }
 
     public function offsetSet($offset, $value)
     {
-        // TODO: Implement offsetSet() method.
+        $this->bind($offset, $value);
     }
 
     public function offsetUnset($offset)
     {
-        // TODO: Implement offsetUnset() method.
+        $this->delete($offset);
+    }
+
+    public function count()
+    {
+        return count($this->instances);
+    }
+
+    public function CountablegetItertor()
+    {
+        return new \ArrayIterator($this->instances);
     }
 }
