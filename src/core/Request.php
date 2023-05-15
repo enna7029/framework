@@ -1101,6 +1101,35 @@ class Request implements ArrayAccess
     }
 
     /**
+     * Note: 获取指定的参数
+     * Date: 2023-05-05
+     * Time: 18:07
+     * @param array $name 变量名
+     * @param string $data 数据
+     * @param string $filter 过滤方法
+     * @return array
+     */
+    public function only(array $name, $data = 'param', $filter = '')
+    {
+        $data = is_array($data) ? $data : $this->$data();
+
+        $item = [];
+        foreach ($name as $key => $val) {
+            if (is_int($key)) {
+                $default = null;
+                $key = $val;
+                if (!isset($data[$key])) {
+                    continue;
+                }
+            } else {
+                $default = $val;
+            }
+
+            $item[$key] = $this->filterData($data[$key] ?? $default, $filter, $key, $default);
+        }
+    }
+
+    /**
      * Note: 设置当前URL  不含QUERY_STRING
      * Date: 2023-04-18
      * Time: 15:35

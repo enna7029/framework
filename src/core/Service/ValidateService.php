@@ -6,6 +6,11 @@ namespace Enna\Framework\Service;
 use Enna\Framework\Service;
 use Enna\Framework\Validate;
 
+/**
+ * 验证服务类
+ * Class ValidateService
+ * @package Enna\Framework\Service
+ */
 class ValidateService extends Service
 {
     public function boot()

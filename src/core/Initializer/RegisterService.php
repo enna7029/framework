@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 namespace Enna\Framework\Initializer;
 
-use Enna\Framework\Service\ValidateService;
 use Enna\Framework\App;
+use Enna\Framework\Service\ValidateService;
+use Enna\Framework\Service\PaginatorService;
+use Enna\Framework\Service\ModelService;
 
 class RegisterService
 {
@@ -14,6 +16,8 @@ class RegisterService
      */
     protected $services = [
         ValidateService::class,
+        PaginatorService::class,
+        ModelService::class,
     ];
 
     public function init(App $app)

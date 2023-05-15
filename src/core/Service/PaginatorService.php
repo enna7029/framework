@@ -7,6 +7,11 @@ use Enna\Orm\Paginator;
 use Enna\Orm\Paginator\Driver\Bootstrap;
 use Enna\Framework\Service;
 
+/**
+ * 分页服务类
+ * Class PaginatorService
+ * @package Enna\Framework\Service
+ */
 class PaginatorService extends Service
 {
     public function register(): void
@@ -18,7 +23,7 @@ class PaginatorService extends Service
 
     public function boot()
     {
-        Paginator::make(function (...$args) {
+        Paginator::maker(function (...$args) {
             return $this->app->make(Paginator::class, $args, true);
         });
 

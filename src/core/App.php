@@ -9,22 +9,23 @@ use Enna\Framework\Initializer\BootService;
 use Enna\Framework\Initializer\RegisterService;
 
 /**
- * @property App $app
- * @property Http $http
- * @property Request $request
- * @property Response $response
- * @property Env $env
- * @property Config $config
- * @property Event $event
- * @property Lang $lang
- * @property Log $log
+ * @property App        $app
+ * @property Http       $http
+ * @property Request    $request
+ * @property Response   $response
+ * @property Env        $env
+ * @property Config     $config
+ * @property Event      $event
+ * @property Lang       $lang
+ * @property Log        $log
  * @property Middleware $middleware
- * @property Route $route
- * @property Cache $cache
- * @property File $file
- * @property Validate $validate
- * @property Cookie $cookie
- * @property Session $session
+ * @property Route      $route
+ * @property Cache      $cache
+ * @property File       $file
+ * @property Validate   $validate
+ * @property Cookie     $cookie
+ * @property Session    $session
+ * @property Db         $db
  */
 class App extends Container
 {

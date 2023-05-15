@@ -210,7 +210,7 @@ class Str
      * @param string $value
      * @return string
      */
-    public function camel(string $value)
+    public static function camel(string $value)
     {
         if (isset(static::$camelCache[$value])) {
             return static::$camelCache[$value];
@@ -226,7 +226,7 @@ class Str
      * @param string $value
      * @return string
      */
-    public function studly(string $value)
+    public static function studly(string $value)
     {
         $key = $value;
 

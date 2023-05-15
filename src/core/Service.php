@@ -19,6 +19,12 @@ abstract class Service
         $this->app = $app;
     }
 
+    /**
+     * Note: 添加指令
+     * Date: 2023-05-11
+     * Time: 14:47
+     * @param $commands
+     */
     protected function commands($commands)
     {
         $commands = is_array($commands) ? $commands : func_get_args();
