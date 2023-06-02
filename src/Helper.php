@@ -42,3 +42,19 @@ if (!function_exists('validate')) {
         return $class->message($message)->batch($batch)->failException($failException);
     }
 }
+
+if (!function_exists('class_basename')) {
+    /**
+     * Note: 获取类型(不包含命名空间)
+     * Date: 2023-05-23
+     * Time: 10:03
+     * @param mixed $class 类名
+     * @return string
+     */
+    function class_basename($class)
+    {
+        $class = is_object($class) ? get_class($class) : $class;
+
+        return basename(str_replace('\\', '/', $class));
+    }
+}

@@ -79,7 +79,7 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
     public function diff($items, string $indexKey = null)
     {
         if ($this->isEmpty() || is_scalar($this->$items[0])) {
-            return new static($this->items, $this->convertToArray($items));
+            return new static(array_diff($this->items, $this->convertToArray($items)));
         }
 
         $diff = [];
@@ -107,7 +107,7 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
     public function intersect($items, string $indexKey = null)
     {
         if ($this->isEmpty() || is_scalar($this->$items[0])) {
-            return new static($this->items, $this->convertToArray($items));
+            return new static(array_diff($this->items, $this->convertToArray($items)));
         }
 
         $intersect = [];

@@ -28,7 +28,7 @@ class ModelService extends Service
 
             $dateFormat = $model->getDateFormat();
             if (is_null($dateFormat)) {
-                $model->setDataFormat($config->get('database.datetime_format'), 'Y-m-d H:i:s');
+                $model->setDateFormat($config->get('database.datetime_format'), 'Y-m-d H:i:s');
             }
 
             $datetimeField = $config->get('database.datetime_field');
