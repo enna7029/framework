@@ -82,7 +82,7 @@ abstract class Driver implements CacheInterface, CacheHandlerInterface
      * @param null|int $ttl 有效期 0:永久
      * @return bool
      */
-    public function setMultiple($values, $ttl = null)
+    public function setMultiple($values, $ttl = null): bool
     {
         foreach ($values as $key => $value) {
             $result = $this->set($key, $value, $ttl);
@@ -103,7 +103,7 @@ abstract class Driver implements CacheInterface, CacheHandlerInterface
      * @param mixed $default 默认值
      * @return iterable
      */
-    public function getMultiple($keys, $default = null)
+    public function getMultiple($keys, $default = null): iterable
     {
         $result = [];
 
@@ -121,7 +121,7 @@ abstract class Driver implements CacheInterface, CacheHandlerInterface
      * @param iterable $keys 缓存变量名
      * @return bool
      */
-    public function deleteMultiple($keys)
+    public function deleteMultiple($keys): bool
     {
         foreach ($keys as $key) {
             $result = $this->delete($key);

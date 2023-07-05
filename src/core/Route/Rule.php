@@ -166,7 +166,7 @@ abstract class Rule
         if (empty($params) && is_array($middleware)) {
             $this->option['middleware'] = $middleware;
         } else {
-            foreach ((array) $middleware as $item) {
+            foreach ((array)$middleware as $item) {
                 $this->option['middleware'][] = [$item, $params];
             }
         }
@@ -186,6 +186,18 @@ abstract class Rule
         $this->pattern = array_merge($this->pattern, $pattern);
 
         return $this;
+    }
+
+    /**
+     * Note: 获取路由配置
+     * Date: 2023-06-21
+     * Time: 10:31
+     * @param string $name 变量名
+     * @return mixed
+     */
+    public function config(string $name = '')
+    {
+        return $this->router->config($name);
     }
 
     /**

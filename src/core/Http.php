@@ -10,6 +10,11 @@ use Enna\Framework\Event\HttpRun;
 use Enna\Framework\Event\HttpEnd;
 use Enna\Framework\Event\RouteLoaded;
 
+/**
+ * Web应用管理类
+ * Class Http
+ * @package Enna\Framework
+ */
 class Http
 {
     /**
@@ -58,31 +63,6 @@ class Http
     }
 
     /**
-     * Note: 使用异常处理类记录异常
-     * Date: 2022-09-20
-     * Time: 17:11
-     * @param Throwable $e
-     * @return void
-     */
-    protected function reportException(Throwable $e)
-    {
-        $this->app->make(Handle::class)->report($e);
-    }
-
-    /**
-     * Note: 使用异常处理类将异常渲染到HTTP响应中
-     * Date: 2022-09-20
-     * Time: 17:15
-     * @param Request $request
-     * @param Throwable $e
-     * @return Response
-     */
-    protected function renderException($request, Throwable $e)
-    {
-        return $this->app->make(Handle::class)->render($request, $e);
-    }
-
-    /**
      * Note: 初始化
      * Date: 2022-09-17
      * Time: 17:20
@@ -114,6 +94,19 @@ class Http
             ->then(function ($request) {
                 return $this->dispatchToRoute($request);
             });
+    }
+
+    /**
+     * Note: 加载全局中间件
+     * Date: 2022-09-20
+     * Time: 18:36
+     * @return void
+     */
+    protected function loadMiddleware(): void
+    {
+        if (is_file($this->app->getAppPath() . 'middleware.php')) {
+            $this->app->middleware->import(include $this->app->getAppPath() . 'middleware.php');
+        }
     }
 
     /**
@@ -151,21 +144,6 @@ class Http
         $this->app->event->trigger(RouteLoaded::class);
     }
 
-
-    /**
-     * Note:
-     * User: enna
-     * Date: 2022-09-20
-     * Time: 18:36
-     * @return void
-     */
-    protected function loadMiddleware(): void
-    {
-        if (is_file($this->app->getAppPath() . 'middleware.php')) {
-            $this->app->middleware->import(include $this->app->getAppPath() . 'middleware.php');
-        }
-    }
-
     /**
      * Note: 获取路由目录
      * Date: 2022-09-28
@@ -175,6 +153,31 @@ class Http
     public function getRoutePath()
     {
         return $this->routePath;
+    }
+
+    /**
+     * Note: 使用异常处理类记录异常
+     * Date: 2022-09-20
+     * Time: 17:11
+     * @param Throwable $e
+     * @return void
+     */
+    protected function reportException(Throwable $e)
+    {
+        $this->app->make(Handle::class)->report($e);
+    }
+
+    /**
+     * Note: 使用异常处理类将异常渲染到HTTP响应中
+     * Date: 2022-09-20
+     * Time: 17:15
+     * @param Request $request
+     * @param Throwable $e
+     * @return Response
+     */
+    protected function renderException($request, Throwable $e)
+    {
+        return $this->app->make(Handle::class)->render($request, $e);
     }
 
     /**

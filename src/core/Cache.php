@@ -13,7 +13,7 @@ use InvalidArgumentException;
  * Class Cache
  * @package Enna\Framework
  */
-class Cache extends Manager
+class Cache extends Manager implements CacheInterface
 {
     protected $namespace = '\\Enna\\Framework\\Cache\\Driver\\';
 
@@ -120,7 +120,7 @@ class Cache extends Manager
      * @param int|\DateTime|null $ttl 有效时间 0:永久
      * @return bool
      */
-    public function set($key, $value, $ttl = null)
+    public function set($key, $value, $ttl = null): bool
     {
         return $this->store()->set($key, $value, $ttl);
     }
@@ -131,9 +131,9 @@ class Cache extends Manager
      * Time: 18:24
      * @param string $key 缓存变量名
      * @param mixed|null $default 默认值
-     * @return mixed|void
+     * @return mixed
      */
-    public function get(string $key, mixed $default = null)
+    public function get(string $key, mixed $default = null): mixed
     {
         return $this->store()->get($key, $default);
     }
@@ -145,7 +145,7 @@ class Cache extends Manager
      * @param string $key 缓存变量名
      * @return bool
      */
-    public function delete(string $key)
+    public function delete(string $key): bool
     {
         return $this->store()->delete($key);
     }
@@ -156,7 +156,7 @@ class Cache extends Manager
      * Time: 14:33
      * @return bool
      */
-    public function clear()
+    public function clear(): bool
     {
         return $this->store()->clear();
     }
@@ -169,7 +169,7 @@ class Cache extends Manager
      * @param mixed|null $default 默认值
      * @return iterable
      */
-    public function getMultiple(iterable $keys, mixed $default = null)
+    public function getMultiple(iterable $keys, mixed $default = null): iterable
     {
         return $this->store()->getMultiple($keys, $default);
     }
@@ -182,7 +182,7 @@ class Cache extends Manager
      * @param int|\DateInterval|null $ttl 有效期 0:永久
      * @return bool
      */
-    public function setMultiple(iterable $values, null|int|\DateInterval $ttl = null)
+    public function setMultiple(iterable $values, null|int|\DateInterval $ttl = null): bool
     {
         return $this->store()->setMultiple($values, $ttl);
     }
@@ -194,7 +194,7 @@ class Cache extends Manager
      * @param iterable $keys 缓存变量名
      * @return bool
      */
-    public function deleteMultiple(iterable $keys)
+    public function deleteMultiple(iterable $keys): bool
     {
         return $this->store()->deleteMultiple($keys);
     }
@@ -206,7 +206,7 @@ class Cache extends Manager
      * @param string $key 缓存变量名
      * @return bool
      */
-    public function has(string $key)
+    public function has(string $key): bool
     {
         return $this->store()->has($key);
     }

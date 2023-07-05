@@ -18,11 +18,11 @@ use Enna\Framework\Exception\RouteNotFoundException;
 class Route
 {
     protected $rest = [
-        'index'  => ['get', '', 'index'],
+        'index' => ['get', '', 'index'],
         'create' => ['get', '/create', 'create'],
-        'edit'   => ['get', '/<id>/edit', 'edit'],
-        'read'   => ['get', '/<id>', 'read'],
-        'save'   => ['post', '', 'save'],
+        'edit' => ['get', '/<id>/edit', 'edit'],
+        'read' => ['get', '/<id>', 'read'],
+        'save' => ['post', '', 'save'],
         'update' => ['put', '/<id>', 'update'],
         'delete' => ['delete', '/<id>', 'delete'],
     ];
@@ -166,7 +166,8 @@ class Route
     public function check()
     {
         $url = $this->path();
-        $result = $this->checkDomain()->check($this->request, $url);
+        $completeMatch = $this->config['route_complete_match'];
+        $result = $this->checkDomain()->check($this->request, $url, $completeMatch);
 
         if ($result !== false) {
             return $result;

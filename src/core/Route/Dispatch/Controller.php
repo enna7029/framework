@@ -36,7 +36,7 @@ class Controller extends Dispatch
         }
 
         //控制器名
-        $controller = $result[0];
+        $controller = $result[0] ?: $this->rule->config('default_controller');
         if (strpos($controller, '.')) {
             $pos = strpos($controller, '.');
             $this->controller = substr($controller, 0, $pos) . '.' . ucwords(substr($controller, 0, $pos + 1));
@@ -45,7 +45,7 @@ class Controller extends Dispatch
         }
 
         //操作名
-        $this->action = $result[1];
+        $this->action = $result[1] ?: $this->rule->config('default_action');
 
         //设置当前请求的控制器,操作
         $this->request->setController($this->controller)->setAction($this->action);

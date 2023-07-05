@@ -4,7 +4,13 @@ namespace Enna\Framework;
 
 use Closure;
 use Throwable;
+use Exception;
 
+/**
+ * 管道管理类
+ * Class Pipeline
+ * @package Enna\Framework
+ */
 class Pipeline
 {
     /**

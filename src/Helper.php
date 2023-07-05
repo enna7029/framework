@@ -58,3 +58,32 @@ if (!function_exists('class_basename')) {
         return basename(str_replace('\\', '/', $class));
     }
 }
+
+if (!function_exists('dump')) {
+    /**
+     * Note: 浏览器友好的变量输出
+     * Date: 2023-06-21
+     * Time: 17:56
+     * @param mixed ...$vars
+     * @return void
+     */
+    function dump(...$vars)
+    {
+        ob_start();
+        var_dump(...$vars);
+
+        $output = ob_get_clean();
+        $output = preg_replace('/\]\=\>\n(\s+)/m', '] => ', $output);
+
+        if (PHP_SAPI == 'cli') {
+            $output = PHP_EOL . $output . PHP_EOL;
+        } else {
+            if (!extension_loaded('xdebug')) {
+                $output = htmlspecialchars($output, ENT_SUBSTITUTE);
+            }
+            $output = '<pre>' . $output . '</pre>';
+        }
+
+        echo $output;
+    }
+}

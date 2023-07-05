@@ -8,7 +8,7 @@ use Enna\Framework\Log\ChannelSet;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 
-class Log extends Manager
+class Log extends Manager implements LoggerInterface
 {
     const EMERGENCY = 'Emergency';
     const ALERT = 'Alert';
@@ -184,7 +184,7 @@ class Log extends Manager
      * @param array $context 上下文内容
      * @return void
      */
-    public function log($level, $message, array $context = [])
+    public function log($level, $message, array $context = []): void
     {
         $this->record($message, $level, $context);
     }
@@ -193,11 +193,11 @@ class Log extends Manager
      * Note: 记录emergency信息
      * Date: 2022-12-23
      * Time: 14:27
-     * @param string|\Stringable $message 日志信息
-     * @param array $context 上下文内容
+     * @param mixed $message 日志信息
+     * @param array $context 替换内容
      * @return void
      */
-    public function emergency($message, array $context = [])
+    public function emergency($message, array $context = []): void
     {
         $this->log(__FUNCTION__, $message, $context);
     }
@@ -210,7 +210,7 @@ class Log extends Manager
      * @param array $context 上下文内容
      * @return void
      */
-    public function alert($message, array $context = [])
+    public function alert($message, array $context = []): void
     {
         $this->log(__FUNCTION__, $message, $context);
     }
@@ -223,7 +223,7 @@ class Log extends Manager
      * @param array $context 上下文内容
      * @return void
      */
-    public function critical($message, array $context = [])
+    public function critical($message, array $context = []): void
     {
         $this->log(__FUNCTION__, $message, $context);
     }
@@ -236,7 +236,7 @@ class Log extends Manager
      * @param array $context 上下文内容
      * @return void
      */
-    public function error($message, array $context = [])
+    public function error($message, array $context = []): void
     {
         $this->log(__FUNCTION__, $message, $context);
     }
@@ -249,7 +249,7 @@ class Log extends Manager
      * @param array $context 上下文内容
      * @return void
      */
-    public function warning($message, array $context = [])
+    public function warning($message, array $context = []): void
     {
         $this->log(__FUNCTION__, $message, $context);
     }
@@ -262,7 +262,7 @@ class Log extends Manager
      * @param array $context 上下文信息
      * @return void
      */
-    public function notice($message, array $context = [])
+    public function notice($message, array $context = []): void
     {
         $this->log(__FUNCTION__, $message, $context);
     }
@@ -275,7 +275,7 @@ class Log extends Manager
      * @param array $context 上下文信息
      * @return void
      */
-    public function info($message, array $context = [])
+    public function info($message, array $context = []): void
     {
         $this->log(__FUNCTION__, $message, $context);
     }
@@ -288,7 +288,7 @@ class Log extends Manager
      * @param array $context 上下文信息
      * @return void
      */
-    public function debug($message, array $context = [])
+    public function debug($message, array $context = []): void
     {
         $this->log(__FUNCTION__, $message, $context);
     }

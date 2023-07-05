@@ -17,6 +17,11 @@ use Enna\Framework\Exception\ClassNotFoundException;
 use Enna\Framework\Exception\FuncNotFoundException;
 use Psr\Container\ContainerInterface;
 
+/**
+ * 容器管理类 支持PSR-11
+ * Class Container
+ * @package Enna\Framework
+ */
 class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, Countable
 {
     /**
@@ -66,7 +71,8 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
      * Note: 设置当前容器实例
      * Date: 2022-09-13
      * Time: 18:52
-     * @param object|Closure $instance
+     * @param object|Closure $instance 容器实例
+     * @return $this
      */
     public static function setInstance($instance)
     {
@@ -77,8 +83,9 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
      * Note: 绑定一个类,闭包,实例,接口实现到容器
      * Date: 2022-09-13
      * Time: 18:49
-     * @param $abstract
-     * @param null $concrete
+     * @param string|array $abstract 类标识,接口
+     * @param mixed $concrete 要绑定的类,闭包或实例
+     * @return $this
      */
     public function bind($abstract, $concrete = null)
     {
@@ -356,7 +363,7 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
      * Date: 2022-09-13
      * Time: 19:04
      * @param string $name 类名或标识符
-     * @return mixed|void
+     * @return object
      */
     public function get(string $abstract)
     {
@@ -511,7 +518,7 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
         return count($this->instances);
     }
 
-    public function CountablegetItertor()
+    public function getIterator()
     {
         return new \ArrayIterator($this->instances);
     }

@@ -17,7 +17,7 @@ interface CacheHandlerInterface
      * @param string $name 缓存变量名
      * @return bool
      */
-    public function has($name);
+    public function has(string $name): bool;
 
     /**
      * Note: 读取缓存
@@ -27,7 +27,7 @@ interface CacheHandlerInterface
      * @param mixed $default 默认值
      * @return bool
      */
-    public function get($name, $default = null);
+    public function get(string $name,mixed $default = null);
 
     /**
      * Note: 设置缓存
@@ -38,7 +38,7 @@ interface CacheHandlerInterface
      * @param int $expire 有效时间(秒)
      * @return bool
      */
-    public function set($name, $value, $expire = null);
+    public function set(string $name, mixed $value, \DateInterval|int|null $expire = null);
 
     /**
      * Note: 自增缓存
@@ -67,7 +67,7 @@ interface CacheHandlerInterface
      * @param string $name 缓存变量名
      * @return bool
      */
-    public function delete($name);
+    public function delete(string $name);
 
     /**
      * Note: 清除缓存

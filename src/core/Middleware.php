@@ -9,7 +9,11 @@ use LogicException;
 use Throwable;
 use Enna\Framework\Exception\Handle;
 
-
+/**
+ * 中间件管理类
+ * Class Middleware
+ * @package Enna\Framework
+ */
 class Middleware
 {
     /**
@@ -130,7 +134,7 @@ class Middleware
      * @param string $type 中间件类型
      * @return Pipeline
      */
-    public function pipeline($type = 'global')
+    public function pipeline(string $type = 'global')
     {
         $pipes = array_map(function ($middleware) {
             return function ($request, $next) use ($middleware) {
@@ -148,8 +152,9 @@ class Middleware
             };
         }, $this->sortMiddleware($this->queue[$type] ?? []));
 
-        $pipeline = new Pipeline();
-        return $pipeline->through($pipes)->whenException([$this, 'handleException']);
+        return (new Pipeline())
+            ->through($pipes)
+            ->whenException([$this, 'handleException']);
     }
 
     /**
@@ -180,7 +185,7 @@ class Middleware
     protected function sortMiddleware(array $middlewares)
     {
         $priority = $this->app->config->get('middleware.priority', []);
-        usort($middlewares, function ($a, $b) use ($priority) {
+        uasort($middlewares, function ($a, $b) use ($priority) {
             $aPriority = $this->getMiddlewarePriority($priority, $a);
             $bPriority = $this->getMiddlewarePriority($priority, $b);
 

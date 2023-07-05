@@ -53,10 +53,10 @@ class File extends Driver
      * Time: 18:34
      * @param string $name 缓存变量名
      * @param mixed $value 缓存数据
-     * @param int|\DateTime $expire
+     * @param \DateInterval|int|null $expire
      * @return bool
      */
-    public function set($name, $value, $expire = null)
+    public function set(string $name, mixed $value, \DateInterval|int|null $expire = null): bool
     {
         $this->writeTimes++;
 
@@ -100,7 +100,7 @@ class File extends Driver
      * @param string $name 缓存变量名
      * @return bool
      */
-    public function has($name)
+    public function has(string $name): bool
     {
         return $this->getRaw($name) !== null;
     }
@@ -111,9 +111,9 @@ class File extends Driver
      * Time: 17:20
      * @param string $name 缓存变量名
      * @param mixed $default 默认值
-     * @return bool|int|mixed|string|null
+     * @return mixed
      */
-    public function get($name, $default = null)
+    public function get(string $name, mixed $default = null): mixed
     {
         $this->readTimes++;
 
@@ -164,7 +164,7 @@ class File extends Driver
      * @param string $name 缓存变量名
      * @return bool|void
      */
-    public function delete($name)
+    public function delete(string $name): bool
     {
         $this->writeTimes++;
 
@@ -176,9 +176,9 @@ class File extends Driver
      * Note: 清除缓存
      * Date: 2022-12-27
      * Time: 11:34
-     * @return bool|void
+     * @return bool
      */
-    public function clear()
+    public function clear(): bool
     {
         $this->writeTimes++;
 

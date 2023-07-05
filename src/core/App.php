@@ -9,23 +9,24 @@ use Enna\Framework\Initializer\BootService;
 use Enna\Framework\Initializer\RegisterService;
 
 /**
- * @property App        $app
- * @property Http       $http
- * @property Request    $request
- * @property Response   $response
- * @property Env        $env
- * @property Config     $config
- * @property Event      $event
- * @property Lang       $lang
- * @property Log        $log
+ * App基础类
+ * @property App $app
+ * @property Http $http
+ * @property Request $request
+ * @property Response $response
+ * @property Env $env
+ * @property Config $config
+ * @property Event $event
+ * @property Lang $lang
+ * @property Log $log
  * @property Middleware $middleware
- * @property Route      $route
- * @property Cache      $cache
- * @property File       $file
- * @property Validate   $validate
- * @property Cookie     $cookie
- * @property Session    $session
- * @property Db         $db
+ * @property Route $route
+ * @property Cache $cache
+ * @property File $file
+ * @property Validate $validate
+ * @property Cookie $cookie
+ * @property Session $session
+ * @property Db $db
  */
 class App extends Container
 {
@@ -143,7 +144,7 @@ class App extends Container
      * App constructor.
      * @param string $rootPath 应用根目录
      */
-    public function __construct($rootPath = '')
+    public function __construct(string $rootPath = '')
     {
         $this->corePath = realpath(dirname(__DIR__)) . DIRECTORY_SEPARATOR;
         $this->rootPath = $rootPath ? rtrim($rootPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR : dirname($this->corePath, 4) . DIRECTORY_SEPARATOR;
@@ -228,19 +229,40 @@ class App extends Container
         }
     }
 
+    /**
+     * Note: 调试模式设置
+     * Date: 2023-06-21
+     * Time: 17:52
+     */
     protected function debugInit()
     {
         if (!$this->appDebug) {
             $this->appDebug = $this->env->get('app_debug') ? true : false;
             ini_set('display_errors', 'Off');
         }
+
+        if (!$this->runningInConsole()) {
+            if (ob_get_level() > 0) {
+                $output = ob_get_clean();
+            }
+            ob_start();
+            if (!empty($output)) {
+                echo $output;
+            }
+        }
     }
 
+    /**
+     * Note: 加载应用文件和配置
+     * Date: 2023-06-21
+     * Time: 18:03
+     * @return void
+     */
     protected function load()
     {
-        //函数
         $appPath = $this->getAppPath();
 
+        //函数
         if (is_file($appPath . 'common.php')) {
             include_once $appPath . 'common.php';
         }
@@ -255,7 +277,7 @@ class App extends Container
             $files = glob($configPath . '*' . $this->configExt);
         }
         foreach ($files as $file) {
-            $this->config->load($file);
+            $this->config->load($file, pathinfo($file, PATHINFO_FILENAME));
         }
 
         //事件
@@ -531,6 +553,17 @@ class App extends Container
     public function getConfigPath()
     {
         return $this->rootPath . 'config' . DIRECTORY_SEPARATOR;
+    }
+
+    /**
+     * Note: 获取配置后缀
+     * Date: 2023-07-05
+     * Time: 18:43
+     * @return string
+     */
+    public function getConfigExt()
+    {
+        return $this->configExt;
     }
 
     /**

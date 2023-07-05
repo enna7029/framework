@@ -92,10 +92,10 @@ class Redis extends Driver
      * Time: 16:39
      * @param string $name 缓存变量名
      * @param mixed $value 缓存数据
-     * @param int|\DateTime $expire 有效时间(秒) 0:永久
+     * @param \DateInterval|int|null $expire 有效时间(秒) 0:永久
      * @return bool
      */
-    public function set($name, $value, $expire = null)
+    public function set(string $name, mixed $value, \DateInterval|int|null $expire = null): bool
     {
         $this->writeTimes++;
 
@@ -124,7 +124,7 @@ class Redis extends Driver
      * @param mixed $default 缓存默认值
      * @return mixed
      */
-    public function get($name, $default = null)
+    public function get(string $name, mixed $default = null): mixed
     {
         $this->readTimes++;
         $key = $this->getCacheKey($name);
@@ -144,7 +144,7 @@ class Redis extends Driver
      * @param string $name
      * @return bool
      */
-    public function has($name)
+    public function has(string $name): bool
     {
         return $this->handler->exists($this->getCacheKey($name)) ? true : false;
     }
@@ -186,9 +186,9 @@ class Redis extends Driver
      * Date: 2023-01-05
      * Time: 18:03
      * @param string $name 缓存变量名
-     * @return bool|void
+     * @return bool
      */
-    public function delete($name)
+    public function delete(string $name): bool
     {
         $this->writeTimes++;
         $key = $this->getCacheKey($name);
@@ -203,7 +203,7 @@ class Redis extends Driver
      * Time: 18:07
      * @return bool|void
      */
-    public function clear()
+    public function clear(): bool
     {
         $this->writeTimes++;
         $this->handler->flushDB();
