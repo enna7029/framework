@@ -3,6 +3,11 @@ declare (strict_types=1);
 
 namespace Enna\Framework\Event;
 
+/**
+ * LogWrite事件类
+ * Class LogWrite
+ * @package Enna\Framework\Event
+ */
 class LogWrite
 {
     /**

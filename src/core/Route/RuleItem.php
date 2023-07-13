@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Enna\Framework\Route;
 
+use Closure;
 use Enna\Framework\Request;
 use Enna\Framework\Route;
 use SebastianBergmann\CodeCoverage\DeadCodeDetectionNotSupportedException;
@@ -27,10 +28,10 @@ class RuleItem extends Rule
      * @param RuleGroup $parent 上级对象
      * @param string $name 路由标识
      * @param string $rule 路由规则
-     * @param string $route 路由地址
+     * @param string|Closure $route 路由地址
      * @param string $method 请求类型
      */
-    public function __construct(Route $router, RuleGroup $parent, string $name = null, string $rule = '', string $route = '', string $method = '*')
+    public function __construct(Route $router, RuleGroup $parent, string $name = null, string $rule = '', $route = null, string $method = '*')
     {
         $this->router = $router;
         $this->parent = $parent;
@@ -172,7 +173,7 @@ class RuleItem extends Rule
         $pattern = $this->getPattern();
 
         if (is_null($match)) {
-            $match = $this->checkMatch($url, $option, $pattern, $completeMatch);
+            $match = $this->match($url, $option, $pattern, $completeMatch);
         }
 
         if ($match !== false) {
@@ -192,7 +193,7 @@ class RuleItem extends Rule
      * @param bool $completeMatch 是否完全匹配
      * @return array|false
      */
-    private function checkMatch(string $url, array $option, array $pattern, bool $completeMatch = false)
+    private function match(string $url, array $option, array $pattern, bool $completeMatch = false)
     {
         $depr = '/';
 

@@ -21,10 +21,12 @@ class Event
      * @var string[]
      */
     protected $bind = [
-        'AppInit' => event\AppInit::class,
-        'HttpRun' => event\HttpRun::class,
-        'LogWrite' => event\LogWrite::class,
-        'LogRecord' => event\LogRecord::class,
+        'AppInit' => Event\AppInit::class,
+        'HttpRun' => Event\HttpRun::class,
+        'HttpEnd' => Event\HttpEnd::class,
+        'LogRecord' => Event\LogRecord::class,
+        'LogWrite' => Event\LogWrite::class,
+        'RouteLoaded' => Event\RouteLoaded::class,
     ];
 
     /**
@@ -56,25 +58,32 @@ class Event
      * Note: 注册监听事件
      * Date: 2022-09-17
      * Time: 14:38
-     * @param string $event 时间名
-     * @param array $listener 监听操作
+     * @param string $event 事件名
+     * @param array $listener 监听操作(或类名)
+     * @param bool $first 是否优先执行
+     * @return $this
      */
-    public function listen(string $event, array $listener)
+    public function listen(string $event, array $listener, bool $first = false)
     {
         if (isset($this->bind[$event])) {
             $event = $this->bind[$event];
         }
 
-        $this->listener[$event][] = $listener;
+        if ($first && isset($this->listener[$event])) {
+            array_unshift($this->listener[$event], $listener);
+        } else {
+            $this->listener[$event][] = $listener;
+        }
 
         return $this;
     }
 
     /**
-     * Note: 注册事件监听
+     * Note: 批量注册事件监听
      * Date: 2022-09-17
      * Time: 11:48
-     * @param array $events 监听者
+     * @param array $events 事件定义
+     * @return $this
      */
     public function listenEvents(array $events)
     {
@@ -83,27 +92,65 @@ class Event
                 $event = $this->bind[$event];
             }
 
-            $this->listener[$event] = array_merge(isset($this->listener[$event]) ? $this->listener[$event] : [], $listener);
+            $this->listener[$event] = array_merge($this->listener[$event] ?? [], $listener);
         }
 
         return $this;
     }
 
     /**
+     * Note: 是否存在事件监听
+     * Date: 2023-07-07
+     * Time: 16:32
+     * @param string $event 事件名称
+     * @return bool
+     */
+    public function hasListener(string $event)
+    {
+        if (isset($this->bind[$event])) {
+            $event = $this->bind[$event];
+        }
+
+        return isset($this->listener[$event]);
+    }
+
+    /**
+     * Note: 移除事件监听
+     * Date: 2023-07-07
+     * Time: 16:33
+     * @param string $event 事件名称
+     * @return void
+     */
+    public function remove(string $event)
+    {
+        if (isset($this->bind[$event])) {
+            $event = $this->bind[$event];
+        }
+
+        unset($this->listener[$event]);
+    }
+
+    /**
      * Note: 注册事件订阅
      * Date: 2022-09-17
      * Time: 14:05
-     * @param array $events 订阅者
+     * @param mixed $subscriber 订阅者
      * @return $this
      */
-    public function subscribe(array $events)
+    public function subscribe($subscriber)
     {
-        foreach ($events as $subscriber) {
+        $subscribers = (array)$subscriber;
+
+        foreach ($subscribers as $subscriber) {
             if (is_string($subscriber)) {
                 $subscriber = $this->app->make($subscriber);
             }
 
-            $this->observe($subscriber);
+            if (method_exists($subscriber, 'subscribe')) {
+                $subscriber->subscribe($this);
+            } else {
+                $this->observe($subscriber);
+            }
         }
 
         return $this;
@@ -114,9 +161,10 @@ class Event
      * Date: 2022-09-17
      * Time: 14:17
      * @param string|object $subscriber 观察者
+     * @param string $prefix 事件名前缀
      * @return $this
      */
-    public function observe($subscriber)
+    public function observe($subscriber, string $prefix = '')
     {
         if (is_string($subscriber)) {
             $subscriber = $this->app->make($subscriber);
@@ -129,10 +177,16 @@ class Event
         }
         $methods = $reflect->getMethods(ReflectionMethod::IS_PUBLIC);
 
+        if (empty($prefix) && $reflect->hasProperty('eventPrefix')) {
+            $reflectProperty = $reflect->hasProperty('eventPrefix');
+            $reflectProperty->setAccessible(true);
+            $prefix = $reflectProperty->getValue($observer);
+        }
+
         foreach ($methods as $method) {
             $name = $method->getName();
             if (strpos($name, 'on') === 0) {
-                $this->listen(substr($name, 2), [$subscriber, $name]);
+                $this->listen($prefix . substr($name, 2), [$subscriber, $name]);
             }
         }
 
@@ -140,15 +194,31 @@ class Event
     }
 
     /**
+     * Note: 触发事件(只获取一个有效值)
+     * Date: 2023-07-07
+     * Time: 16:45
+     * @param mixed $event 事件名
+     * @param mixed $params 参数
+     * @return mixed
+     */
+    public function until($event, $params = null)
+    {
+        return $this->trigger($event, $params, true);
+    }
+
+    /**
      * Note: 触发事件
      * Date: 2022-09-19
      * Time: 16:42
-     * @param string $event 事件名
+     * @param string|object $event 事件名
+     * @param mixed $params 参数
+     * @param bool $once 只获取一个有效返回值
      * @return mixed
      */
-    public function trigger($event)
+    public function trigger($event, $params = null, bool $once = false)
     {
         if (is_object($event)) {
+            $params = $event;
             $event = get_class($event);
         }
 
@@ -157,27 +227,32 @@ class Event
         }
         $result = [];
         $listeners = $this->listener[$event] ?? [];
+        $listeners = array_unique($listeners, SORT_REGULAR);
 
         foreach ($listeners as $key => $listener) {
-            $result[$key] = $this->dispatch($listeners);
+            $result[$key] = $this->dispatch($listeners, $params);
+
+            if ($result[$key] === false || (!is_null($result[$key]) && $once)) {
+                break;
+            }
         }
 
-        return $result;
+        return $once ? end($result) : $result;
     }
 
     /**
      * Note: 执行事件调度
      * Date: 2022-09-19
      * Time: 17:44
-     * @param string $event 事件
+     * @param mixed $event 事件
+     * @param mixed $params 参数
      * @return mixed
      */
-    protected function dispatch(string $event)
+    protected function dispatch(string $event, $params = null)
     {
         $obj = $this->app->make($event);
         $call = [$obj, 'handle'];
 
-        return $this->app->invoke($call);
+        return $this->app->invoke($call, [$params]);
     }
-
 }

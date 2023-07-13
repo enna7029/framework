@@ -68,6 +68,41 @@ class Resource extends RuleGroup
         }
 
         $this->router->setGroup($origin);
+    }
 
+    /**
+     * Note: 设置资源路由的变量
+     * Date: 2023-07-13
+     * Time: 11:25
+     * @param array $vars 资源变量
+     * @return $this
+     */
+    public function vars(array $vars)
+    {
+        return $this->setOption('var', $vars);
+    }
+
+    /**
+     * Note: 设置资源允许
+     * Date: 2023-07-13
+     * Time: 11:27
+     * @param array $only 资源允许
+     * @return $this
+     */
+    public function only(array $only)
+    {
+        return $this->setOption('only', $only);
+    }
+
+    /**
+     * Note: 设置资源排除
+     * Date: 2023-07-13
+     * Time: 11:29
+     * @param array $except 排除资源
+     * @return $this
+     */
+    public function except(array $except)
+    {
+        return $this->setOption('except', $except);
     }
 }

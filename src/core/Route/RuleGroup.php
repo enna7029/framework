@@ -259,4 +259,43 @@ class RuleGroup extends Rule
         });
     }
 
+    /**
+     * Note: 设置分组的路由前缀
+     * Date: 2023-07-13
+     * Time: 10:36
+     * @param string $prefix 路由前缀
+     * @return $this
+     */
+    public function prefix(string $prefix)
+    {
+        if ($this->parent && $this->parent->getOption('prefix')) {
+            $prefix = $this->parent->getOption('prefix') . $prefix;
+        }
+
+        return $this->setOption('prefix', $prefix);
+    }
+
+    /**
+     * Note: 合并分组的路由规则正则
+     * Date: 2023-07-13
+     * Time: 10:56
+     * @param bool $merge
+     * @return RuleGroup
+     */
+    public function mergeRuleRegex(bool $merge = true)
+    {
+        return $this->setOption('merge_rule_regex', $merge);
+    }
+
+    /**
+     * Note: 设置分组的Dispatch调度
+     * Date: 2023-07-13
+     * Time: 11:02
+     * @param string $dispatch 调度类
+     * @return $this
+     */
+    public function dispatcher(string $dispatch)
+    {
+        return $this->setOption('dispatcher', $dispatch);
+    }
 }

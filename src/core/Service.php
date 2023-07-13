@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Enna\Framework;
 
 /**
- * Class Service
  * 系统服务基础类
+ * Class Service
  * @package Enna\Framework
  * @method void register()
  * @method void boot()

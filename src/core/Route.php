@@ -12,8 +12,9 @@ use Enna\Framework\Route\RuleGroup;
 use Enna\Framework\Route\RuleItem;
 use Enna\Framework\Route\RuleName;
 use Enna\Framework\Route\Resource;
-use Enna\Framework\Route\Url as BuildUrl;
+use Enna\Framework\Route\Url;
 use Enna\Framework\Exception\RouteNotFoundException;
+use Enna\Framework\Route\Rule;
 
 class Route
 {
@@ -96,6 +97,18 @@ class Route
      */
     protected $bind = [];
 
+    /**
+     * 分组路由规则是否合并解析
+     * @var bool
+     */
+    protected $mergeRuleRegex = false;
+
+    /**
+     * 跨域路由规则
+     * @var RuleGroup
+     */
+    protected $cross;
+
     public function __construct(App $app)
     {
         $this->app = $app;
@@ -122,6 +135,21 @@ class Route
         $this->domains['-'] = $domain;
 
         $this->group = $domain;
+    }
+
+    /**
+     * Note: 设置分组路由或域名路由是否合并解析
+     * Date: 2023-07-13
+     * Time: 10:55
+     * @param bool $merge
+     * @return $this
+     */
+    public function mergeRuleRegex(bool $merge = true)
+    {
+        $this->mergeRuleRegex = $merge;
+        $this->group->mergeRuleRegex($merge);
+
+        return $this;
     }
 
     /**
@@ -371,16 +399,17 @@ class Route
     }
 
     /**
-     * Note:
+     * Note: 注册资源路由
      * Date: 2022-10-25
      * Time: 18:28
      * @param string $rule 路由规则
      * @param string $route 路由地址
-     * @Resource
+     * @return Resource
      */
     public function resource(string $rule, string $route)
     {
-        return (new Resource($this, $this->group, $rule, $route, $this->rest));
+        return (new Resource($this, $this->group, $rule, $route, $this->rest))
+            ->lazy($this->lazy);
     }
 
     /**
@@ -448,7 +477,7 @@ class Route
      * Date: 2022-10-26
      * Time: 18:27
      * @param string $bind 绑定信息
-     * @param string|null $domain 域名
+     * @param string $domain 域名
      * @return $this
      */
     public function bind(string $bind, string $domain = null)
@@ -525,11 +554,11 @@ class Route
      * Time: 10:58
      * @param string $url 路由地址
      * @param array $vars 参数
-     * @return UrlBuild
+     * @return Url
      */
     public function buildUrl(string $url = '', array $vars = [])
     {
-        return $this->app->make(BuildUrl::class, [$this, $this->app, $url, $vars], true);
+        return $this->app->make(Url::class, [$this, $this->app, $url, $vars], true);
     }
 
     /**
@@ -591,6 +620,44 @@ class Route
     public function getGroup(string $name = '')
     {
         return $name ? $this->ruleName->getGroup($name) : $this->group;
+    }
+
+    /**
+     * Note: rest方法定义和修改
+     * Date: 2023-07-13
+     * Time: 11:36
+     * @param string|array $name 方法名称
+     * @param array|bool $resource 资源
+     * @return $this
+     */
+    public function rest($name, $resource = [])
+    {
+        if (is_array($name)) {
+            $this->rest = $resource ? $name : array_merge($this->rest, $name);
+        } else {
+            $this->rest[$name] = $resource;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Note: 设置跨域有效路由规则
+     * Date: 2023-07-13
+     * Time: 14:29
+     * @param Rule $rule 路由规则
+     * @param string $method 请求类型
+     * @return $this
+     */
+    public function setCrossDomainRule(Rule $rule, string $method = '*')
+    {
+        if (!isset($this->cross)) {
+            $this->cross = (new RuleGroup($this))->mergeRuleRegex($this->mergeRuleRegex);
+        }
+
+        $this->cross->addRuleItem($rule, $method);
+
+        return $this;
     }
 
 }

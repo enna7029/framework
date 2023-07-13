@@ -10,7 +10,7 @@ use Enna\Framework\Exception\HttpException;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionException;
-use app\controller\Index;
+use Enna\Framework\Helper\Str;
 
 class Controller extends Dispatch
 {
@@ -39,11 +39,10 @@ class Controller extends Dispatch
         $controller = $result[0] ?: $this->rule->config('default_controller');
         if (strpos($controller, '.')) {
             $pos = strpos($controller, '.');
-            $this->controller = substr($controller, 0, $pos) . '.' . ucwords(substr($controller, 0, $pos + 1));
+            $this->controller = substr($controller, 0, $pos) . '.' . Str::studly(substr($controller, $pos + 1));
         } else {
-            $this->controller = ucwords($controller);
+            $this->controller = Str::studly($controller);
         }
-
         //操作名
         $this->action = $result[1] ?: $this->rule->config('default_action');
 
@@ -58,22 +57,30 @@ class Controller extends Dispatch
         } catch (ClassNotFoundException $e) {
             throw new HttpException(404, 'controller not exists:' . $e->getClass());
         }
-
         $this->registerControllerMiddleware($instance);
 
         return $this->app->middleware->pipeline('controller')
             ->send($this->request)
             ->then(function () use ($instance) {
-                $action = $this->action;
+                $suffix = $this->rule->config('action_suffix');
+                $action = $this->action . $suffix;
 
                 if (is_callable([$instance, $action])) {
                     $vars = $this->request->param();
 
                     try {
                         $reflect = new ReflectionMethod($instance, $action);
+
+                        $actionName = $reflect->getName();
+                        if ($suffix) {
+                            $actionName = substr($actionName, 0, -strlen($suffix));
+                        }
+                        $this->request->setAction($actionName);
                     } catch (ReflectionException $e) {
                         $reflect = new ReflectionMethod($instance, '__call');
                         $vars = [$action, $vars];
+
+                        $this->request->setAction($action);
                     }
                 } else {
                     throw new HttpException(404, 'method not exists:' . get_class($instance) . '->' . $action . '()');
@@ -139,9 +146,9 @@ class Controller extends Dispatch
      */
     public function controller(string $name)
     {
-        $suffix = 'Controller';
-        $controllerLayer = 'controller';
-        $emptyController = 'Error';
+        $suffix = $this->rule->config('controller_suffix') ? 'Controller' : ''; //是否使用控制器后缀
+        $controllerLayer = $this->rule->config('controller_layer') ?: 'controller'; //控制器层名称
+        $emptyController = $this->rule->config('empty_controller') ?: 'Error'; //空控制器名
 
         $class = $this->app->parseClass($controllerLayer, $name);
 

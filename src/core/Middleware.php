@@ -92,6 +92,39 @@ class Middleware
     }
 
     /**
+     * Note: 注册中间件到开始位置
+     * Date: 2023-07-07
+     * Time: 11:23
+     * @param mixed $middleware
+     * @param string $type 中间件类型
+     * @return void
+     */
+    public function unshift($middleware, string $type = 'global')
+    {
+        $middleware = $this->parse($middleware, $type);
+
+        if (!empty($middleware)) {
+            if (!isset($this->queue[$type])) {
+                $this->queue[$type] = [];
+            }
+
+            array_unshift($this->queue[$type], $middleware);
+        }
+    }
+
+    /**
+     * Note: 获取注册的中间件
+     * Date: 2023-07-07
+     * Time: 11:26
+     * @param string $type 中间件类型
+     * @return array
+     */
+    public function all(string $type = 'global')
+    {
+        return $this->queue[$type] ?? [];
+    }
+
+    /**
      * Note: 解析中间件
      * Date: 2022-09-21
      * Time: 16:30

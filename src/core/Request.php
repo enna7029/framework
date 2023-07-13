@@ -64,6 +64,12 @@ class Request implements ArrayAccess
     protected $route = [];
 
     /**
+     * 中间件传递参数
+     * @var array
+     */
+    protected $middleware = [];
+
+    /**
      * FILE参数
      * @var array
      */
@@ -439,6 +445,19 @@ class Request implements ArrayAccess
     public function get($name = '', $default = null, $filter = '')
     {
         return $this->input($this->get, $name, $default, $filter);
+    }
+
+    /**
+     * Note: 获取中间件传递的参数
+     * Date: 2023-07-07
+     * Time: 14:23
+     * @param string $name 参数名
+     * @param mixed $default 默认值
+     * @return mixed
+     */
+    public function middleware(string $name, $default = null)
+    {
+        return $this->middleware[$name] ?? $default;
     }
 
     /**
@@ -1080,14 +1099,44 @@ class Request implements ArrayAccess
         return $this;
     }
 
-    public function setUrl()
+    /**
+     * Note: 设置当前完整URL
+     * Date: 2023-07-12
+     * Time: 11:28
+     * @param string $url URL地址
+     * @return $this
+     */
+    public function setUrl(string $url)
     {
+        $this->url = $url;
 
+        return $this;
     }
 
-    public function url()
+    /**
+     * Note: 获取当前完整URL
+     * Date: 2023-07-12
+     * Time: 9:43
+     * @param bool $complete 是否包含完整域名
+     * @return string
+     */
+    public function url(bool $complete = false)
     {
+        if ($this->url) {
+            $url = $this->url;
+        } elseif ($this->server('HTTP_X_REWRITE_URL')) {
+            $url = $this->server('HTTP_X_REWRITE_URL');
+        } elseif ($this->server('REQUEST_URI')) {
+            $url = $this->server('REQUEST_URI');
+        } elseif ($this->server('ORIG_PATH_INFO')) {
+            $url = $this->server('ORIG_PATH_INFO') . (!empty($this->server('QUERY_STRING')) ? '?' . $this->server('QUERY_STRING') : '');
+        } elseif (isset($_SERVER['argv'][1])) {
+            $url = $_SERVER['argv'][1];
+        } else {
+            $url = '';
+        }
 
+        return $complete ? $this->domain() . $url : $url;
     }
 
     public function setDomain()
@@ -1158,6 +1207,31 @@ class Request implements ArrayAccess
         }
 
         return $complete ? $this->domain() . $this->baseUrl : $this->baseUrl;
+    }
+
+    /**
+     * Note: 设置中间件传递数据
+     * Date: 2023-07-07
+     * Time: 14:20
+     * @param string $name 参数名
+     * @param mixed $value 值
+     * @return void
+     */
+    public function __set(string $name, $value)
+    {
+        $this->middleware[$name] = $value;
+    }
+
+    /**
+     * Note: 获取中间件传递数据的值
+     * Date: 2023-07-07
+     * Time: 14:22
+     * @param string $name 参数名
+     * @return mixed
+     */
+    public function __get(string $name)
+    {
+        return $this->middleware($name);
     }
 
     public function offsetUnset($offset)

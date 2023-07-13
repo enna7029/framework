@@ -233,8 +233,8 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
      * Note: 调用反射,执行类的实例化
      * Date: 2022-09-14
      * Time: 11:58
-     * @param string $abstract
-     * @param array $vars
+     * @param string $abstract 类名
+     * @param array $vars 参数
      * @return object
      */
     public function invokeClass(string $abstract, array $vars = [])
@@ -250,6 +250,7 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
             if ($method->isPublic() && $method->isStatic()) {
                 $args = $this->bindParams($method, $vars);
                 $object = $method->invokeArgs(null, $args);
+                $this->invokeAfter($abstract, $object);
                 return $object;
             }
         }
@@ -257,6 +258,7 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
         $constructor = $reflect->getConstructor();
         $args = $constructor ? $this->bindParams($constructor, $vars) : [];
         $object = $reflect->newInstanceArgs($args);
+        $this->invokeAfter($abstract, $object);
 
         return $object;
     }

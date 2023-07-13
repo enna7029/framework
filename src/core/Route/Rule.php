@@ -9,6 +9,7 @@ use Enna\Framework\Middleware\AllowCrossDomain;
 use \Enna\Framework\Request;
 use Enna\Framework\Route\Dispatch\Callback as CallbackDispatch;
 use Enna\Framework\Route\Dispatch\Controller as ControllerDispatch;
+use Enna\Framework\Middleware\CheckCache;
 
 abstract class Rule
 {
@@ -102,20 +103,6 @@ abstract class Rule
     }
 
     /**
-     * Note: 附加路由隐藏参数
-     * Date: 2022-10-25
-     * Time: 18:09
-     * @param array $append 参数
-     * @return $thisF
-     */
-    public function append(array $append = [])
-    {
-        $this->option['append'] = $append;
-
-        return $this;
-    }
-
-    /**
      * Note: 设置标识
      * Date: 2022-10-25
      * Time: 18:10
@@ -133,12 +120,24 @@ abstract class Rule
      * Note: 检查后缀
      * Date: 2022-10-26
      * Time: 14:49
-     * @param string $ext 后缀
+     * @param string $ext URL后缀
      * @return $this
      */
     public function ext(string $ext = '')
     {
         return $this->setOption('ext', $ext);
+    }
+
+    /**
+     * Note: 检查禁止后缀
+     * Date: 2023-07-12
+     * Time: 11:37
+     * @param string $ext URL后缀
+     * @return $this
+     */
+    public function denyExt(string $ext = '')
+    {
+        return $this->setOption('deny_ext', $ext);
     }
 
     /**
@@ -152,6 +151,103 @@ abstract class Rule
     {
         return $this->setOption('https', $https);
     }
+
+    /**
+     * Note: 检查域名
+     * Date: 2023-07-12
+     * Time: 13:58
+     * @param string $domain 域名
+     * @return $this
+     */
+    public function domain(string $domain)
+    {
+        $this->domain = $domain;
+
+        return $this->setOption('domain', $domain);
+    }
+
+    /**
+     * Note: 设置路由完整匹配
+     * Date: 2023-07-12
+     * Time: 14:00
+     * @param bool $match 是否完整匹配
+     * @return $this
+     */
+    public function completeMatch(bool $match = true)
+    {
+        return $this->setOption('complete_match', $match);
+    }
+
+    /**
+     * Note: 绑定模型
+     * Date: 2023-07-12
+     * Time: 18:13
+     * @param array|string|Closure $var 路由变量名 多个使用&分割
+     * @param string|Closure $model 绑定模型类
+     * @param bool $exception 是否抛出异常
+     * @return $this
+     */
+    public function model($var, $model = null, bool $exception = true)
+    {
+        if ($var instanceof Closure) {
+            $this->option['model'][] = $var;
+        } elseif (is_array($var)) {
+            $this->option['model'] = $var;
+        } elseif (is_null($model)) {
+            $this->option['model']['id'] = [$var, true];
+        } else {
+            $this->option['model'][$var] = [$model, $exception];
+        }
+
+        return $this;
+    }
+
+    /**
+     * Note: 设置路由缓存
+     * Date: 2023-07-12
+     * Time: 18:22
+     * @param array|string $cache 缓存
+     * @return $this
+     */
+    public function cache($cache)
+    {
+        return $this->middleware(CheckCache::class, $cache);
+    }
+
+    public function ajax()
+    {
+
+    }
+
+    public function pjax()
+    {
+
+    }
+
+    public function json()
+    {
+
+    }
+
+    public function validate()
+    {
+
+    }
+
+    /**
+     * Note: 附加路由隐藏参数
+     * Date: 2022-10-25
+     * Time: 18:09
+     * @param array $append 参数
+     * @return $this
+     */
+    public function append(array $append = [])
+    {
+        $this->option['append'] = $append;
+
+        return $this;
+    }
+
 
     /**
      * Note: 设置路由中间件
@@ -172,6 +268,25 @@ abstract class Rule
         }
 
         return $this;
+    }
+
+    /**
+     * Note: 设置参数过滤检查
+     * Date: 2023-07-12
+     * Time: 13:59
+     * @param string $filter 参数过滤
+     * @return $this
+     */
+    public function filter(string $filter)
+    {
+        $this->option['filter'] = $filter;
+
+        return $this;
+    }
+
+    public function match()
+    {
+
     }
 
     /**
@@ -347,8 +462,7 @@ abstract class Rule
     }
 
     /**
-     * Note:
-     * User: enna
+     * Note: 允许跨域
      * Date: 2022-10-27
      * Time: 10:34
      * @param array $header 自定义的header
@@ -386,6 +500,11 @@ abstract class Rule
             }
         }
 
+        //伪静态后缀检查
+        if ($request->url() != '/' && (isset($option['ext']) && stripos('|' . $option['ext'] . '|', '|' . $request->url() . '|') === false) || (isset($option['deny_ext']) && stripos('|' . $option['deny_ext'] . '|', '|' . $request->url() . '|') !== false)) {
+            return false;
+        }
+
         //域名检测
         if (isset($option['domain']) && !in_array($option['domain'], [$request->host(true), $request->subDomain()])) {
             return false;
@@ -396,7 +515,35 @@ abstract class Rule
             return false;
         }
 
+        //请求参数检测
+        if (isset($option['filter'])) {
+            foreach ($option['filter'] as $name => $value) {
+                if ($request->param($name, '', null) != $value) {
+                    return false;
+                }
+            }
+        }
+
         return true;
+    }
+
+    /**
+     * Note: 设置路由规则全局有效
+     * Date: 2023-07-13
+     * Time: 14:26
+     * @return $this
+     */
+    public function crossDomainRule()
+    {
+        if ($this instanceof RuleGroup) {
+            $method = '*';
+        } else {
+            $method = $this->method;
+        }
+
+        $this->router->setCrossDomainRule($this, $method);
+
+        return $this;
     }
 
     /**

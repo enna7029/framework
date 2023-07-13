@@ -7,6 +7,7 @@ use Enna\Framework\Event\AppInit;
 use Enna\Framework\Initializer\Error;
 use Enna\Framework\Initializer\BootService;
 use Enna\Framework\Initializer\RegisterService;
+use Enna\Framework\Helper\Str;
 
 /**
  * App基础类
@@ -403,13 +404,18 @@ class App extends Container
      * Note: 解析应用类的类名
      * Date: 2022-10-09
      * Time: 18:31
-     * @param string $layer
-     * @param string $name
+     * @param string $layer 层名,例如controller,model
+     * @param string $name 类名
      * @return string
      */
     public function parseClass(string $layer, string $name)
     {
-        return $this->namespace . '\\' . $layer . '\\' . $name;
+        $name  = str_replace(['/', '.'], '\\', $name);
+        $array = explode('\\', $name);
+        $class = Str::studly(array_pop($array));
+        $path  = $array ? implode('\\', $array) . '\\' : '';
+
+        return $this->namespace . '\\' . $layer . '\\' . $path . $class;
 
     }
 
@@ -480,6 +486,20 @@ class App extends Container
     }
 
     /**
+     * Note: 设置环境变量标识
+     * Date: 2023-07-06
+     * Time: 10:23
+     * @param string $name 环境标识
+     * @return $this
+     */
+    public function setEnvName(string $name)
+    {
+        $this->envName = $name;
+
+        return $this;
+    }
+
+    /**
      * Note: 获取框架版本
      * Date: 2022-10-12
      * Time: 17:43
@@ -532,6 +552,17 @@ class App extends Container
     public function getRootPath()
     {
         return $this->rootPath;
+    }
+
+    /**
+     * Note: 获取应用基础目录
+     * Date: 2023-07-06
+     * Time: 16:33
+     * @return string
+     */
+    public function getBasePath()
+    {
+        return $this->rootPath . 'app' . DIRECTORY_SEPARATOR;
     }
 
     /**

@@ -3,6 +3,11 @@ declare (strict_types=1);
 
 namespace Enna\Framework\Event;
 
+/**
+ * LogRecord事件类
+ * Class LogRecord
+ * @package Enna\Framework\Event
+ */
 class LogRecord
 {
     /**

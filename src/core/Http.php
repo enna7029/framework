@@ -5,6 +5,7 @@ namespace Enna\Framework;
 
 use Enna\Framework\Event\AppInit;
 use Enna\Framework\Exception\Handle;
+use Predis\Command\Redis\DISCARD;
 use Throwable;
 use Enna\Framework\Event\HttpRun;
 use Enna\Framework\Event\HttpEnd;
@@ -24,6 +25,18 @@ class Http
     protected $app;
 
     /**
+     * 应用名称
+     * @var string
+     */
+    protected $name;
+
+    /**
+     * 应用路径
+     * @var string
+     */
+    protected $path;
+
+    /**
      * 路由路径
      * @var string
      */
@@ -34,6 +47,83 @@ class Http
         $this->app = $app;
 
         $this->routePath = $this->app->getRootPath() . 'route' . DIRECTORY_SEPARATOR;
+    }
+
+    /**
+     * Note: 设置应用名称
+     * Date: 2023-07-06
+     * Time: 15:56
+     * @param string $name
+     * @return $this
+     */
+    public function name(string $name)
+    {
+        $this->name = $name;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取应用名称
+     * Date: 2023-07-06
+     * Time: 15:58
+     * @return string
+     */
+    public function getName()
+    {
+        return $this->name ?: '';
+    }
+
+    /**
+     * Note: 设置应用目录
+     * Date: 2023-07-06
+     * Time: 15:59
+     * @param string $path 应用目录
+     * @return $this
+     */
+    public function path(string $path)
+    {
+        if (substr($path, -1) != DIRECTORY_SEPARATOR) {
+            $path .= DIRECTORY_SEPARATOR;
+        }
+
+        $this->path = $path;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取应用路径
+     * Date: 2023-07-06
+     * Time: 16:18
+     * @return string
+     */
+    public function getPath()
+    {
+        return $this->path ?: '';
+    }
+
+    /**
+     * Note: 获取路由目录
+     * Date: 2023-07-06
+     * Time: 16:19
+     * @return string
+     */
+    public function getRoutePath()
+    {
+        return $this->routePath;
+    }
+
+    /**
+     * Note: 设置路由目录
+     * Date: 2023-07-06
+     * Time: 16:20
+     * @param string $path 路由定义目录
+     * @return void
+     */
+    public function setRoutePath(string $path)
+    {
+        $this->routePath = $path;
     }
 
     /**
@@ -142,17 +232,6 @@ class Http
         }
 
         $this->app->event->trigger(RouteLoaded::class);
-    }
-
-    /**
-     * Note: 获取路由目录
-     * Date: 2022-09-28
-     * Time: 16:16
-     * @return string
-     */
-    public function getRoutePath()
-    {
-        return $this->routePath;
     }
 
     /**
