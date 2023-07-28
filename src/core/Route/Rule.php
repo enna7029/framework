@@ -11,6 +11,11 @@ use Enna\Framework\Route\Dispatch\Callback as CallbackDispatch;
 use Enna\Framework\Route\Dispatch\Controller as ControllerDispatch;
 use Enna\Framework\Middleware\CheckCache;
 
+/**
+ * 路由规则基础类
+ * Class Rule
+ * @package Enna\Framework\Route
+ */
 abstract class Rule
 {
     /**
@@ -72,6 +77,8 @@ abstract class Rule
      * @var array
      */
     protected $pattern = [];
+
+    abstract public function check(Request $request, string $url, bool $completeMatch = false);
 
     /**
      * Note: 设置单个路由参数
@@ -229,9 +236,21 @@ abstract class Rule
 
     }
 
-    public function validate()
+    /**
+     * Note: 绑定验证
+     * Date: 2023-07-28
+     * Time: 10:41
+     * @param mixed $validate 验证器类
+     * @param string $scene 验证场景
+     * @param arary $message 验证提示
+     * @param bool $batch 批量验证
+     * @return $this
+     */
+    public function validate($validate, string $scene = null, array $message = [], bool $batch = false)
     {
+        $this->option['validate'] = [$validate, $scene, $message, $batch];
 
+        return $this;
     }
 
     /**
@@ -282,11 +301,6 @@ abstract class Rule
         $this->option['filter'] = $filter;
 
         return $this;
-    }
-
-    public function match()
-    {
-
     }
 
     /**
@@ -414,6 +428,10 @@ abstract class Rule
     {
         $option = $this->option;
 
+        if ($this->parent) {
+
+        }
+
         if ($name === '') {
             return $option;
         }
@@ -432,6 +450,10 @@ abstract class Rule
     {
         $pattern = $this->pattern;
 
+        if ($this->parent) {
+            $pattern = array_merge($this->parent->getPattern(), $pattern);
+        }
+
         if ($name == '') {
             return $pattern;
         }
@@ -444,7 +466,7 @@ abstract class Rule
      * Note: 解析URL的pathinfo路径
      * Date: 2022-10-09
      * Time: 16:47
-     * @param string $url
+     * @param string $url URL地址
      * @return array
      */
     public function parseUrlPath(string $url)
@@ -501,7 +523,7 @@ abstract class Rule
         }
 
         //伪静态后缀检查
-        if ($request->url() != '/' && (isset($option['ext']) && stripos('|' . $option['ext'] . '|', '|' . $request->url() . '|') === false) || (isset($option['deny_ext']) && stripos('|' . $option['deny_ext'] . '|', '|' . $request->url() . '|') !== false)) {
+        if ($request->url() != '/' && (isset($option['ext']) && stripos('|' . $option['ext'] . '|', '|' . $request->ext() . '|') === false) || (isset($option['deny_ext']) && stripos('|' . $option['deny_ext'] . '|', '|' . $request->ext() . '|') !== false)) {
             return false;
         }
 
@@ -547,32 +569,46 @@ abstract class Rule
     }
 
     /**
-     * Note: 解析匹配到的路由规则
+     * Note: 解析匹配到的规则路由
      * Date: 2022-10-29
      * Time: 17:36
      * @param Request $request 请求对象
      * @param string $rule 路由规则
      * @param mixed $route 路由地址
      * @param string $url URL地址
-     * @param array $option 选项
+     * @param array $option 路由参数
      * @param array $matches 匹配到的变量
+     * @return Dispatch
      */
     public function parseRule(Request $request, string $rule, $route, string $url, array $option = [], array $matches = [])
     {
         if (is_string($route) && isset($option['prefix'])) {
             $route = $option['prefix'] . $route;
         }
+
         $search = $replace = [];
+        $extraParams = true;
+        $depr = $this->router->config('pathinfo_depr');
         foreach ($matches as $key => $value) {
             $search[] = '<' . $key . '>';
             $replace[] = $value;
 
             $search[] = ':' . $key;
             $replace[] = $value;
+
+            if (strpos($value, $depr)) {
+                $extraParams = false;
+            }
         }
 
         if (is_string($route)) {
             $route = str_replace($search, $replace, $route);
+        }
+
+        if ($extraParams) {
+            $count = substr_count($rule, '/');
+            $url = array_slice(explode('|', $url), $count + 1);
+            $this->parseUrlParams(implode('|', $url), $matches);
         }
 
         $this->vars = $matches;
@@ -596,6 +632,9 @@ abstract class Rule
             $result = $route($request, $this, $route, $this->vars);
         } elseif ($route instanceof Closure) {
             $result = new CallbackDispatch($request, $this, $route, $this->vars);
+        } elseif (strpos($route, '@') !== false || strpos($route, '::') !== false || strpos($route, '\\') !== false) {
+            $route = str_replace('::', '@', $route);
+            $result = $this->dispatchMethod($result, $route);
         } else {
             //路由到控制器/操作
             $result = $this->dispatchController($request, $route);
@@ -606,13 +645,31 @@ abstract class Rule
 
     /**
      * Note: 解析URL地址为 模块/控制器/操作
+     * Date: 2023-07-27
+     * Time: 14:27
+     * @param Request $request 请求对象
+     * @param string $route 路由地址
+     * @return CallbackDispatch
+     */
+    protected function dispatchMethod(Request $request, string $route)
+    {
+        $path = $this->parseUrlPath($route);
+
+        $route = str_replace('/', '@', implode('/', $path));
+        $method = strpos($route, '@') ? explode('@', $route) : $route;
+
+        return new CallbackDispatch($request, $this, $method, $this->vars);
+    }
+
+    /**
+     * Note: 解析URL地址为 模块/控制器/操作
      * Date: 2022-11-09
      * Time: 18:20
      * @param Request $request 请求对象
      * @param string $route 路由地址
      * @return ControllerDispatch
      */
-    public function dispatchController(Request $request, string $route)
+    protected function dispatchController(Request $request, string $route)
     {
         $path = $this->parseUrlPath($route);
 
@@ -620,6 +677,121 @@ abstract class Rule
         $controller = !empty($path) ? array_pop($path) : null;
 
         return new ControllerDispatch($request, $this, [$controller, $action], $this->vars);
+    }
+
+    /**
+     * Note: 解析URL中的参数
+     * Date: 2023-07-18
+     * Time: 11:21
+     * @param string $url 路由地址
+     * @param array $var 变量
+     * @return void
+     */
+    protected function parseUrlParams(string $url, array &$var = [])
+    {
+        if ($url) {
+            preg_replace_callback('/(\w+)\|([^\|]+)/', function ($match) use (&$var) {
+                $var[$match[1]] = strip_tags($match[2]);
+            }, $url);
+        }
+    }
+
+    /**
+     * Note: 设置路由请求类型
+     * Date: 2023-07-19
+     * Time: 14:40
+     * @param string $method 请求类型
+     * @return $this
+     */
+    public function method(string $method)
+    {
+        return $this->setOption('method', strtolower($method));
+    }
+
+    /**
+     * 生成路由的正则规则
+     * @access protected
+     * @param string $rule 路由规则
+     * @param array $match 匹配的变量
+     * @param array $pattern 路由变量规则
+     * @param array $option 路由参数
+     * @param bool $completeMatch 路由是否完全匹配
+     * @param string $suffix 路由正则变量后缀
+     * @return string
+     */
+    protected function buildRuleRegex(string $rule, array $match, array $pattern = [], array $option = [], bool $completeMatch = false, string $suffix = ''): string
+    {
+        //$match = ['/<id>']; //变量
+        foreach ($match as $name) {
+            $value = $this->buildNameRegex($name, $pattern, $suffix);
+            if ($value) {
+                $origin[] = $name;
+                $replace[] = $value;
+            }
+        }
+
+        // 是否区分 / 地址访问
+        if ($rule != '/') {
+            if (!empty($option['remove_slash'])) {
+                $rule = rtrim($rule, '/');
+            } elseif (substr($rule, -1) == '/') {
+                $rule = rtrim($rule, '/');
+                $hasSlash = true;
+            }
+        }
+
+        $regex = isset($replace) ? str_replace($origin, $replace, $rule) : $rule;
+        $regex = str_replace([')?/', ')?-'], [')/', ')-'], $regex);
+
+        if (isset($hasSlash)) {
+            $regex .= '/';
+        }
+
+        return $regex . ($completeMatch ? '$' : '');
+    }
+
+    /**
+     * 生成路由变量的正则规则
+     * @access protected
+     * @param string $name 路由变量
+     * @param array $pattern 变量规则
+     * @param string $suffix 路由正则变量后缀
+     * @return string
+     */
+    protected function buildNameRegex(string $name, array $pattern, string $suffix): string
+    {
+        $optional = '';
+        $slash = substr($name, 0, 1);
+
+        if (in_array($slash, ['/', '-'])) {
+            $prefix = $slash;
+            $name = substr($name, 1);
+            $slash = substr($name, 0, 1);
+        } else {
+            $prefix = '';
+        }
+
+        if ('<' != $slash) {
+            return '';
+        }
+
+        if (strpos($name, '?')) {
+            $name = substr($name, 1, -2);
+            $optional = '?';
+        } elseif (strpos($name, '>')) {
+            $name = substr($name, 1, -1);
+        }
+
+        if (isset($pattern[$name])) {
+            $nameRule = $pattern[$name];
+            if (strpos($nameRule, '/') === 0 && substr($nameRule, -1) == '/') {
+                $nameRule = substr($nameRule, 1, -1);
+            }
+        } else {
+            $nameRule = $this->router->config('default_route_pattern');
+        }
+
+        return '(' . $prefix . '(?<' . $name . $suffix . '>' . $nameRule . '))' . $optional;
     }
 
     public function __debugInfo(): ?array

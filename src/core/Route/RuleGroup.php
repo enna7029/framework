@@ -3,11 +3,16 @@ declare(strict_types=1);
 
 namespace Enna\Framework\Route;
 
+use Closure;
 use Enna\Framework\Container;
 use Enna\Framework\Request;
 use Enna\Framework\Route;
-use Mockery\Matcher\Closure;
 
+/**
+ * 路由分组类
+ * Class RuleGroup
+ * @package Enna\Framework\Route
+ */
 class RuleGroup extends Rule
 {
     /**
@@ -34,7 +39,14 @@ class RuleGroup extends Rule
      */
     protected $fullName;
 
-    public function __construct(Route $router, RuleGroup $parent = null, string $name = '', $rule = '')
+    /**
+     * RuleGroup constructor.
+     * @param Route $router 路由对象
+     * @param RuleGroup $parent 上级对象:默认domain对象或父group对象
+     * @param string $name 分组名称
+     * @param mixed $rule 分组路由
+     */
+    public function __construct(Route $router, RuleGroup $parent = null, string $name = '', $rule = null)
     {
         $this->router = $router;
         $this->parent = $parent;
@@ -57,6 +69,10 @@ class RuleGroup extends Rule
      */
     protected function setFullName()
     {
+        if (strpos($this->name, ':') !== false) {
+            $this->name = preg_replace(['/\[\:(\w+)\]/', '/\:(\w+)/'], ['<\1?>', '<\1>'], $this->name);
+        }
+
         if ($this->parent && $this->parent->getFullName()) {
             $this->fullName = $this->parent->getFullName() . ($this->name ? '/' . $this->name : '');
         } else {
@@ -116,14 +132,14 @@ class RuleGroup extends Rule
         //创建路由规则实例
         $ruleItem = new RuleItem($this->router, $this, $name, $rule, $route, $method);
 
-        //注册路由规则
+        //注册分组下的路由规则
         $this->addRuleItem($ruleItem, $method);
 
         return $ruleItem;
     }
 
     /**
-     * Note: 添加分组下的路由规则
+     * Note: 注册分组下的路由规则
      * Date: 2022-10-22
      * Time: 14:58
      * @param Rule $rule 路由规则
@@ -132,6 +148,11 @@ class RuleGroup extends Rule
      */
     public function addRuleItem(Rule $rule, string $method = '*')
     {
+        if (strpos($method, '|')) {
+            $rule->method($method);
+            $method = '*';
+        }
+
         $this->rules[] = [$method, $rule];
 
         if ($rule instanceof RuleItem && $method != 'options') {
@@ -185,10 +206,15 @@ class RuleGroup extends Rule
      */
     public function parseGroupRule($rule)
     {
+        if (is_string($rule) && is_subclass_of($rule, Dispatch::class)) {
+            $this->dispatcher($rule);
+            return;
+        }
+
         $origin = $this->router->getGroup();
         $this->router->setGroup($this);
 
-        if ($rule instanceof \Closure) {
+        if ($rule instanceof Closure) {
             Container::getInstance()->invokeFunction($rule);
         } elseif (is_string($rule) && $rule) {
             $this->router->bind($rule, $this->domain);
@@ -207,23 +233,42 @@ class RuleGroup extends Rule
      * @param bool $completeMatch 路由是否完全匹配
      * @return Dispatch|false
      */
-    public function check(Request $request, string $url, bool $completeMatch)
+    public function check(Request $request, string $url, bool $completeMatch = false)
     {
-        //检查选项有效性
-        if (!$this->checkOption($this->option, $request)) {
+        //检查选项有效性,检查URL有效性
+        if (!$this->checkOption($this->option, $request) || !$this->checkUrl($url)) {
             return false;
         }
 
         if ($this instanceof Resource) {
+            //解析资源路由规则
             $this->buildResourceRule();
         } else {
+            //解析分组或域名的路由规则
             $this->parseGroupRule($this->rule);
         }
 
+        //获取当前分组下的路由规则
         $method = strtolower($request->method());
         $rules = $this->getRules($method);
+
+        //获取当前分组下的路由选项
         $option = $this->getOption();
 
+        if (!empty($option['complete_match'])) {
+            $completeMatch = $option['complete_match'];
+        }
+
+        //合并路由规则,进行路由匹配检查
+        if (!empty($option['merge_rule_regex'])) {
+            $result = $this->checkMergeRuleRegex($result, $rules, $url, $completeMatch);
+
+            if ($result !== false) {
+                return $result;
+            }
+        }
+
+        //检查分组下的路由
         foreach ($rules as $key => $item) {
             $result = $item[1]->check($request, $url, $completeMatch);
 
@@ -232,13 +277,41 @@ class RuleGroup extends Rule
             }
         }
 
-        if ($this->miss && in_array($this->miss->getMethod(), ['*', $method])) { //未匹配路由规则
+        if (!empty($option['dispatcher'])) { //路由分组指定的调度类
+            $result = $this->parseRule($request, '', $option['dispatcher'], $url, $option);
+        } elseif ($this->miss && in_array($this->miss->getMethod(), ['*', $method])) { //未匹配路由规则
             $result = $this->parseRule($request, '', $this->miss->getRoute(), $url, $this->miss->getOption());
         } else {
             $result = false;
         }
 
         return $result;
+    }
+
+    /**
+     * Note: 分组URL匹配检查
+     * Date: 2023-07-19
+     * Time: 17:55
+     * @param string $url URL
+     * @return bool
+     */
+    protected function checkUrl(string $url)
+    {
+        if ($this->fullName) {
+            $pos = strpos($this->fullName, '<');
+
+            if ($pos !== false) {
+                $str = substr($this->fullName, 0, $pos);
+            } else {
+                $str = $this->fullName;
+            }
+
+            if ($str && stripos(str_replace('|', '/', $url), $str) !== 0) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -298,4 +371,17 @@ class RuleGroup extends Rule
     {
         return $this->setOption('dispatcher', $dispatch);
     }
+
+    /**
+     * Note: 是否去除URL最后的斜线
+     * Date: 2023-07-13
+     * Time: 18:09
+     * @param bool $remove 是否去除最后的斜线
+     * @return $this
+     */
+    public function removeSlash(bool $remove = false)
+    {
+        return $this->setOption('remove_slash', $remove);
+    }
+
 }

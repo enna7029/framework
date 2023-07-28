@@ -4,6 +4,11 @@ namespace Enna\Framework\Route;
 
 use Enna\Framework\Route;
 
+/**
+ * 资源路由类
+ * Class Resource
+ * @package Enna\Framework\Route
+ */
 class Resource extends RuleGroup
 {
     /**
@@ -27,7 +32,7 @@ class Resource extends RuleGroup
     /**
      * Resource constructor.
      * @param Route $router 路由对象
-     * @param RuleGroup|null $parent 上级对象
+     * @param RuleGroup $parent 上级对象
      * @param string $name 资源名称
      * @param string $route 路由地址
      * @param array $rest 资源定义
@@ -43,9 +48,12 @@ class Resource extends RuleGroup
 
         $this->setFullName();
 
+        $this->option['complete_match'] = true;
+
         $this->rest = $rest;
 
         if ($this->parent) {
+            $this->domain = $this->parent->getDomain();
             $this->parent->addRuleItem($this);
         }
     }
@@ -64,6 +72,18 @@ class Resource extends RuleGroup
         $this->router->setGroup($this);
 
         foreach ($this->rest as $key => $val) {
+            //过滤
+            if ((isset($option['only']) && !in_array($key, $option['only']))
+                || (isset($option['except'])) && in_array($key, $option['except'])) {
+                continue;
+            }
+
+            //改变默认的<id>变量名
+            if (strpos($val[1], '<id>') && isset($option['var'][$rule])) {
+                $val[1] = str_replace('<id>', '<' . $option['var'][$rule] . '>', $val[1]);
+            }
+
+            //增加路由规则
             $ruleItem = $this->addRule(trim($val[1]), $this->route . '/' . $val[2], $val[0]);
         }
 
@@ -104,5 +124,24 @@ class Resource extends RuleGroup
     public function except(array $except)
     {
         return $this->setOption('except', $except);
+    }
+
+    /**
+     * Note: rest方法定义和修改
+     * Date: 2023-07-28
+     * Time: 17:31
+     * @param string|array $name 资源路由标识
+     * @param array|bool $resource 资源
+     * @return $this
+     */
+    public function rest($name, $resource)
+    {
+        if (is_array($name)) {
+            $this->rest = $resource ? $name : array_merge($this->rest, $name);
+        } else {
+            $this->rest[$name] = $resource;
+        }
+
+        return $this;
     }
 }

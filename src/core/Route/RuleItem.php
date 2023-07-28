@@ -6,8 +6,12 @@ namespace Enna\Framework\Route;
 use Closure;
 use Enna\Framework\Request;
 use Enna\Framework\Route;
-use SebastianBergmann\CodeCoverage\DeadCodeDetectionNotSupportedException;
 
+/**
+ * 路由规则类
+ * Class RuleItem
+ * @package Enna\Framework\Route
+ */
 class RuleItem extends Rule
 {
     /**
@@ -39,13 +43,18 @@ class RuleItem extends Rule
         $this->route = $route;
         $this->method = $method;
 
+        //路由规则预处理
         $this->setRule($rule);
 
+        //设置路由标识
+        $this->setRuleName();
+
+        //设置路由规则
         $this->router->setRule($this->rule, $this);
     }
 
     /**
-     * Note: 设置路由规则
+     * Note: 路由规则预处理
      * Date: 2022-10-22
      * Time: 11:58
      * @param string $rule 路由规则
@@ -53,12 +62,15 @@ class RuleItem extends Rule
      */
     public function setRule(string $rule)
     {
+        //是否完整匹配
         if (substr($rule, -1, 1) == '$') {
             $rule = substr($rule, 0, -1);
+            $this->option['complete_match'] = true;
         }
 
         $rule = '/' != $rule ? ltrim($rule, '/') : '';
 
+        //如果有父级对象并且父级对象有名称,则增加路由规则前缀
         if ($this->parent && $prefix = $this->parent->getFullName()) {
             $rule = $prefix . ($rule ? '/' . ltrim($rule, '/') : '');
         }
@@ -68,8 +80,21 @@ class RuleItem extends Rule
         } else {
             $this->rule = $rule;
         }
+    }
 
-        $this->setRuleName();
+    /**
+     * Note: 设置路由标识
+     * Date: 2023-07-19
+     * Time: 14:07
+     * @param string $name
+     * @return $this
+     */
+    public function name(string $name)
+    {
+        $this->name = $name;
+        $this->setRuleName(true);
+
+        return $this;
     }
 
     /**
@@ -79,7 +104,7 @@ class RuleItem extends Rule
      * @param bool $first 是否插入开头
      * @return void
      */
-    protected function setRuleName($first = false)
+    protected function setRuleName(bool $first = false)
     {
         if ($this->name) {
             $this->router->setName($this->name, $this, $first);
@@ -95,7 +120,19 @@ class RuleItem extends Rule
     public function setAutoOptions()
     {
         $this->autoOption = true;
+
         return $this;
+    }
+
+    /**
+     * Note: 判断当前路由规则是否为自动注册的OPTIONS路由
+     * Date: 2023-07-27
+     * Time: 17:43
+     * @return bool
+     */
+    public function isAutoOptions()
+    {
+        return $this->autoOption;
     }
 
     /**
@@ -168,10 +205,12 @@ class RuleItem extends Rule
         if (!$this->checkOption($this->option, $request)) {
             return false;
         }
-        $completeMatch = true;
+
         $option = $this->getOption();
         $pattern = $this->getPattern();
+        $url = $this->urlSuffixCheck($request, $url, $option);
 
+        //检查匹配的变量
         if (is_null($match)) {
             $match = $this->match($url, $option, $pattern, $completeMatch);
         }
@@ -184,7 +223,30 @@ class RuleItem extends Rule
     }
 
     /**
-     * Note: 检测URL和规则是否匹配
+     * Note: URL后缀检查
+     * Date: 2023-07-26
+     * Time: 10:51
+     * @param Request $request 请求对象
+     * @param string $url 访问地址
+     * @param array $option 路由参数
+     * @return string
+     */
+    protected function urlSuffixCheck(Request $request, string $url, array $option = [])
+    {
+        if (!empty($option['remove_slash']) && $this->rule != '/') {
+            $this->rule = rtrim($this->rule, '/');
+            $url = rtrim($url, '|');
+        }
+
+        if (isset($option['ext'])) {
+            $url = preg_replace('/\.(' . $request->ext() . ')$/i', '', $url);
+        }
+
+        return $url;
+    }
+
+    /**
+     * Note: 检测URL和规则是否匹配,并返回匹配的变量
      * Date: 2022-10-29
      * Time: 15:45
      * @param string $url URL地址
@@ -195,22 +257,30 @@ class RuleItem extends Rule
      */
     private function match(string $url, array $option, array $pattern, bool $completeMatch = false)
     {
-        $depr = '/';
+        if (isset($option['complete_match'])) {
+            $completeMatch = $option['complete_match'];
+        }
+
+        $depr = $this->router->config('pathinfo_depr');
 
         $var = [];
-        $url = $depr . $url;
-        $rule = $depr . $this->rule;
+        $url = $depr . str_replace('|', $depr, $url);
+        $rule = $depr . str_replace('/', $depr, $this->rule);
 
+        //对首页/的特殊处理
         if ($rule == $depr && $depr != $url) {
             return false;
         }
 
+        //对没有变量的路由,将路由规则与路由地址进行匹配,并返回变量空数组
         if (strpos($this->rule, '<') === false) {
-            if (strcasecmp($rule, $url) === 0 || (!$completeMatch && strncasecmp($rule . '/', $url . '/', strlen($rule . '/')) === 0)) {
+            if (strcasecmp($rule, $url) === 0 || (!$completeMatch && strncasecmp($rule . $depr, $url . $depr, strlen($rule . $depr)) === 0)) {
                 return $var;
             }
+            return false;
         }
 
+        //将含有变量的规则查分,对比路由规则和路由地址
         $slash = preg_quote('/-' . $depr, '/');
         if ($matchRule = preg_split('/[' . $slash . ']?<\w+\??>/', $rule, 2)) {
             if ($matchRule[0] && strncasecmp($rule, $url, strlen($matchRule[0])) !== 0) {
@@ -234,93 +304,7 @@ class RuleItem extends Rule
                 }
             }
         }
+
         return $var;
     }
-
-    /**
-     * 生成路由的正则规则
-     * @access protected
-     * @param string $rule 路由规则
-     * @param array $match 匹配的变量
-     * @param array $pattern 路由变量规则
-     * @param array $option 路由参数
-     * @param bool $completeMatch 路由是否完全匹配
-     * @param string $suffix 路由正则变量后缀
-     * @return string
-     */
-    protected function buildRuleRegex(string $rule, array $match, array $pattern = [], array $option = [], bool $completeMatch = false, string $suffix = ''): string
-    {
-        //$match = ['/<id>'];
-        foreach ($match as $name) {
-            $value = $this->buildNameRegex($name, $pattern, $suffix);
-            if ($value) {
-                $origin[] = $name;
-                $replace[] = $value;
-            }
-        }
-
-        // 是否区分 / 地址访问
-        if ('/' != $rule) {
-            if (!empty($option['remove_slash'])) {
-                $rule = rtrim($rule, '/');
-            } elseif (substr($rule, -1) == '/') {
-                $rule = rtrim($rule, '/');
-                $hasSlash = true;
-            }
-        }
-
-        $regex = isset($replace) ? str_replace($origin, $replace, $rule) : $rule;
-        $regex = str_replace([')?/', ')?-'], [')/', ')-'], $regex);
-
-        if (isset($hasSlash)) {
-            $regex .= '/';
-        }
-
-        return $regex . ($completeMatch ? '$' : '');
-    }
-
-    /**
-     * 生成路由变量的正则规则
-     * @access protected
-     * @param string $name 路由变量
-     * @param array $pattern 变量规则
-     * @param string $suffix 路由正则变量后缀
-     * @return string
-     */
-    protected function buildNameRegex(string $name, array $pattern, string $suffix): string
-    {
-        $optional = '';
-        $slash = substr($name, 0, 1);
-
-        if (in_array($slash, ['/', '-'])) {
-            $prefix = $slash;
-            $name = substr($name, 1);
-            $slash = substr($name, 0, 1);
-        } else {
-            $prefix = '';
-        }
-
-        if ('<' != $slash) {
-            return '';
-        }
-
-        if (strpos($name, '?')) {
-            $name = substr($name, 1, -2);
-            $optional = '?';
-        } elseif (strpos($name, '>')) {
-            $name = substr($name, 1, -1);
-        }
-
-        if (isset($pattern[$name])) {
-            $nameRule = $pattern[$name];
-            if (0 === strpos($nameRule, '/') && '/' == substr($nameRule, -1)) {
-                $nameRule = substr($nameRule, 1, -1);
-            }
-        } else {
-            $nameRule = $this->router->config('default_route_pattern');
-        }
-
-        return '(' . $prefix . '(?<' . $name . $suffix . '>' . $nameRule . '))' . $optional;
-    }
-
 }

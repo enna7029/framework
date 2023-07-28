@@ -36,7 +36,7 @@ class Controller extends Dispatch
         }
 
         //控制器名
-        $controller = $result[0] ?: $this->rule->config('default_controller');
+        $controller = strip_tags($result[0] ?: $this->rule->config('default_controller'));
         if (strpos($controller, '.')) {
             $pos = strpos($controller, '.');
             $this->controller = substr($controller, 0, $pos) . '.' . Str::studly(substr($controller, $pos + 1));
@@ -44,7 +44,7 @@ class Controller extends Dispatch
             $this->controller = Str::studly($controller);
         }
         //操作名
-        $this->action = $result[1] ?: $this->rule->config('default_action');
+        $this->action = strip_tags($result[1] ?: $this->rule->config('default_action'));
 
         //设置当前请求的控制器,操作
         $this->request->setController($this->controller)->setAction($this->action);
@@ -87,7 +87,7 @@ class Controller extends Dispatch
                 }
 
                 $data = $this->app->invokeReflectMethod($instance, $reflect, $vars);
-
+         
                 return $data;
             });
     }

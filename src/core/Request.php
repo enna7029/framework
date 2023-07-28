@@ -745,12 +745,16 @@ class Request implements ArrayAccess
      * Note: 获取路由参数
      * Date: 2022-09-30
      * Time: 17:51
-     * @param string $name 变量名
-     * @param null $default 默认值
-     * @param string $filter 过滤方法
+     * @param string|array $name 变量名
+     * @param mixed $default 默认值
+     * @param string|array $filter 过滤方法
+     * @return mixed
      */
     public function route($name = '', $default = null, $filter = '')
     {
+        if (is_array($name)) {
+            $this->only($name, $this->route, $filter);
+        }
         return $this->input($this->route, $name, $default, $filter);
     }
 
@@ -1020,10 +1024,13 @@ class Request implements ArrayAccess
      * Note: 获取根域名
      * Date: 2022-10-28
      * Time: 17:15
+     * @return string
      */
     public function rootDomain()
     {
-        if (is_null($this->rootDomain)) {
+        $root = $this->rootDomain;
+
+        if (is_null($root)) {
             $item = explode(',', $this->host());
             $count = count($item);
             $root = $count > 1 ? $item[$count - 2] . '.' . $item[$count - 1] : $item[0];
@@ -1207,6 +1214,31 @@ class Request implements ArrayAccess
         }
 
         return $complete ? $this->domain() . $this->baseUrl : $this->baseUrl;
+    }
+
+    /**
+     * Note: 设置当前泛域名的值
+     * Date: 2023-07-17
+     * Time: 17:51
+     * @param string $domain 域名
+     * @return $this
+     */
+    public function setPanDomain(string $domain)
+    {
+        $this->panDomain = $domain;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取当前泛域名值
+     * Date: 2023-07-17
+     * Time: 17:47
+     * @return string
+     */
+    public function panDomain()
+    {
+        return $this->panDomain ?: '';
     }
 
     /**

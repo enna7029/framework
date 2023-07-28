@@ -151,12 +151,13 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
     }
 
     /**
-     * Note: 调动反射执行类的方法
+     * Note: 调用反射,执行类的方法
      * Date: 2022-10-10
      * Time: 18:29
-     * @param $instance
-     * @param $reflect
-     * @param array $vars
+     * @param object $instance 对象实例
+     * @param mixed $reflect 反射类
+     * @param array $vars 参数
+     * @return mixed
      */
     public function invokeReflectMethod($instance, $reflect, array $vars = [])
     {
@@ -215,6 +216,7 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
      * Time: 9:35
      * @param string|Closure $function 函数或闭包
      * @param array $vars 参数
+     * @return mixed
      */
     public function invokeFunction($function, array $vars = [])
     {
