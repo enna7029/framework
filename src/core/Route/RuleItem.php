@@ -145,6 +145,8 @@ class RuleItem extends Rule
     {
         if (isset($this->option['ext'])) {
             $suffix = $this->option['ext'];
+        } elseif ($this->parent->getOption('ext')) {
+            $suffix = $this->parent->getOption('ext');
         } else {
             $suffix = null;
         }
@@ -196,7 +198,7 @@ class RuleItem extends Rule
      * Time: 14:59
      * @param Request $request
      * @param string $url 地址
-     * @param null $match 匹配变量
+     * @param array $match 匹配变量
      * @param bool $completeMatch 路由是否完全匹配
      * @return Dispatch|false
      */
@@ -280,14 +282,13 @@ class RuleItem extends Rule
             return false;
         }
 
-        //将含有变量的规则查分,对比路由规则和路由地址
+        //将含有变量的规则查出,对比路由规则和路由地址
         $slash = preg_quote('/-' . $depr, '/');
         if ($matchRule = preg_split('/[' . $slash . ']?<\w+\??>/', $rule, 2)) {
             if ($matchRule[0] && strncasecmp($rule, $url, strlen($matchRule[0])) !== 0) {
                 return false;
             }
         }
-
         if (preg_match_all('/[' . $slash . ']?<?\w+\??>?/', $rule, $matches)) {
             $regex = $this->buildRuleRegex($rule, $matches[0], $pattern, $option, $completeMatch);
             try {

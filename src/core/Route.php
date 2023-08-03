@@ -548,6 +548,13 @@ class Route
         return $this;
     }
 
+    /**
+     * Note: 注册路由参数
+     * Date: 2023-08-02
+     * Time: 14:23
+     * @param array $option 参数
+     * @return $this
+     */
     public function option(array $option)
     {
         $this->group->option($option);
@@ -730,6 +737,10 @@ class Route
         $completeMatch = $this->config['route_complete_match'];
 
         $result = $this->checkDomain()->check($this->request, $url, $completeMatch);
+
+        if ($result === false && !empty($this->cross)) {
+            $result = $this->cross->check($this->request, $url, $completeMatch);
+        }
 
         if ($result !== false) {
             return $result;

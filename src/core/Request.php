@@ -908,6 +908,105 @@ class Request implements ArrayAccess
     }
 
     /**
+     * Note: 是否为GET请求
+     * Date: 2023-08-03
+     * Time: 16:47
+     * @return bool
+     */
+    public function isGet()
+    {
+        return $this->method() == 'GET';
+    }
+
+    /**
+     * Note: 是否为POST请求
+     * Date: 2023-08-03
+     * Time: 16:48
+     * @return bool
+     */
+    public function isPost()
+    {
+        return $this->method() == 'POST';
+    }
+
+    /**
+     * Note: 是否为PUT请求
+     * Date: 2023-08-03
+     * Time: 16:49
+     * @return bool
+     */
+    public function isPut()
+    {
+        return $this->method() == 'PUT';
+    }
+
+    /**
+     * Note: 是否为DELETE请求
+     * Date: 2023-08-03
+     * Time: 16:50
+     * @return bool
+     */
+    public function isDelete()
+    {
+        return $this->method() == 'DELETE';
+    }
+
+    /**
+     * Note: 是否为HEAD请求
+     * Date: 2023-08-03
+     * Time: 16:51
+     * @return bool
+     */
+    public function isHead()
+    {
+        return $this->method() == 'HEAD';
+    }
+
+    /**
+     * Note: 是否为PATCH请求
+     * Date: 2023-08-03
+     * Time: 16:51
+     * @return bool
+     */
+    public function isPatch()
+    {
+        return $this->method() == 'PATCH';
+    }
+
+    /**
+     * Note: 是否为OPTIONS请求
+     * Date: 2023-08-03
+     * Time: 16:52
+     * @return bool
+     */
+    public function isOptions()
+    {
+        return $this->method() == 'OPTIONS';
+    }
+
+    /**
+     * Note: 是否为cli
+     * Date: 2023-08-03
+     * Time: 16:53
+     * @return bool
+     */
+    public function isCli()
+    {
+        return PHP_SAPI == 'cli';
+    }
+
+    /**
+     * Note: 是否为cgi
+     * Date: 2023-08-03
+     * Time: 16:53
+     * @return bool
+     */
+    public function cgi()
+    {
+        return strpos(PHP_SAPI, 'cgi') === 0;
+    }
+
+    /**
      * Note: 请求的资源类型
      * Date: 2022-10-09
      * Time: 14:20

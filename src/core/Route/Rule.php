@@ -5,11 +5,12 @@ namespace Enna\Framework\Route;
 
 use Closure;
 use Enna\Framework\Route;
+use Enna\Framework\Request;
 use Enna\Framework\Middleware\AllowCrossDomain;
-use \Enna\Framework\Request;
+use Enna\Framework\Middleware\CheckRequestCache;
+use Enna\Framework\Middleware\FormTokenCheck;
 use Enna\Framework\Route\Dispatch\Callback as CallbackDispatch;
 use Enna\Framework\Route\Dispatch\Controller as ControllerDispatch;
-use Enna\Framework\Middleware\CheckCache;
 
 /**
  * 路由规则基础类
@@ -78,10 +79,16 @@ abstract class Rule
      */
     protected $pattern = [];
 
+    /**
+     * 需要和分组合并的路由参数
+     * @var string[]
+     */
+    protected $mergeOptions = ['model', 'append', 'middleware'];
+
     abstract public function check(Request $request, string $url, bool $completeMatch = false);
 
     /**
-     * Note: 设置单个路由参数
+     * Note: 批量设置路由参数
      * Date: 2022-10-26
      * Time: 14:47
      * @param array $option 参数
@@ -186,6 +193,90 @@ abstract class Rule
     }
 
     /**
+     * Note: 是否去除URL最后的斜线
+     * Date: 2023-07-13
+     * Time: 18:09
+     * @param bool $remove 是否去除最后的斜线
+     * @return $this
+     */
+    public function removeSlash(bool $remove = false)
+    {
+        return $this->setOption('remove_slash', $remove);
+    }
+
+    /**
+     * Note: 设置路由请求类型
+     * Date: 2023-07-19
+     * Time: 14:40
+     * @param string $method 请求类型
+     * @return $this
+     */
+    public function method(string $method)
+    {
+        return $this->setOption('method', strtolower($method));
+    }
+
+    /**
+     * Note: 路由到一个模板地址 需要额外传入的模板变量
+     * Date: 2023-08-01
+     * Time: 18:23
+     * @param array $view 视图
+     * @return $this
+     */
+    public function view(array $view = [])
+    {
+        return $this->setOption('view', $view);
+    }
+
+    /**
+     * Note: 检查是否为ajax请求
+     * Date: 2023-08-01
+     * Time: 18:24
+     * @param bool $ajax 是否为ajax
+     * @return $this
+     */
+    public function ajax(bool $ajax = true)
+    {
+        return $this->setOption('ajax', $ajax);
+    }
+
+    /**
+     * Note: 检查是否为PJAX请求
+     * Date: 2023-08-01
+     * Time: 18:25
+     * @param bool $pjax 是否为PJAX
+     * @return $this
+     */
+    public function pjax(bool $pjax = true)
+    {
+        return $this->setOption('ajax', $ajax);
+    }
+
+    /**
+     * Note: 检查是否为JSON请求
+     * Date: 2023-08-01
+     * Time: 18:25
+     * @param bool $json 是否为json
+     * @return $this
+     */
+    public function json(bool $json = true)
+    {
+        return $this->setOption('json', $json);
+    }
+
+    /**
+     * Note: 检查URL分隔符
+     * Date: 2023-08-01
+     * Time: 18:31
+     * @param string $depr URL分隔符
+     * @return $this
+     */
+    public function depr(string $depr)
+    {
+        return $this->setOption('param_depr', $depr);
+    }
+
+    /**
      * Note: 绑定模型
      * Date: 2023-07-12
      * Time: 18:13
@@ -207,33 +298,6 @@ abstract class Rule
         }
 
         return $this;
-    }
-
-    /**
-     * Note: 设置路由缓存
-     * Date: 2023-07-12
-     * Time: 18:22
-     * @param array|string $cache 缓存
-     * @return $this
-     */
-    public function cache($cache)
-    {
-        return $this->middleware(CheckCache::class, $cache);
-    }
-
-    public function ajax()
-    {
-
-    }
-
-    public function pjax()
-    {
-
-    }
-
-    public function json()
-    {
-
     }
 
     /**
@@ -417,6 +481,20 @@ abstract class Rule
     }
 
     /**
+     * Note: 设置需要合并的路由参数
+     * Date: 2023-08-01
+     * Time: 18:27
+     * @param array $option 路由参数
+     * @return $this
+     */
+    public function mergeOptions(array $option = [])
+    {
+        $this->mergeOptions = array_merge($this->mergeOptions, $option);
+
+        return $this;
+    }
+
+    /**
      * Note: 获取路由参数定义
      * Date: 2022-10-22
      * Time: 17:03
@@ -429,7 +507,15 @@ abstract class Rule
         $option = $this->option;
 
         if ($this->parent) {
+            $parentOption = $this->parent->getOption();
 
+            foreach ($this->mergeOptions as $item) {
+                if (isset($parentOption[$item]) && $option[$item]) {
+                    $option[$item] = array_merge($parentOption[$item], $option[$item]);
+                }
+            }
+
+            $option = array_merge($parentOption, $option);
         }
 
         if ($name === '') {
@@ -493,6 +579,30 @@ abstract class Rule
     public function allowCrossDomain(array $header = [])
     {
         return $this->middleware(AllowCrossDomain::class, $header);
+    }
+
+    /**
+     * Note: 表单令牌验证
+     * Date: 2023-08-02
+     * Time: 14:33
+     * @param string $token 表单令牌token名称
+     * @return $this
+     */
+    public function token(string $token = '__token__')
+    {
+        return $this->middleware(FormTokenCheck::class, $token);
+    }
+
+    /**
+     * Note: 设置路由缓存
+     * Date: 2023-07-12
+     * Time: 18:22
+     * @param array|string $cache 缓存
+     * @return $this
+     */
+    public function cache($cache)
+    {
+        return $this->middleware(CheckRequestCache::class, $cache);
     }
 
     /**
@@ -697,19 +807,7 @@ abstract class Rule
     }
 
     /**
-     * Note: 设置路由请求类型
-     * Date: 2023-07-19
-     * Time: 14:40
-     * @param string $method 请求类型
-     * @return $this
-     */
-    public function method(string $method)
-    {
-        return $this->setOption('method', strtolower($method));
-    }
-
-    /**
-     * 生成路由的正则规则
+     * 生成路由规则的正则
      * @access protected
      * @param string $rule 路由规则
      * @param array $match 匹配的变量
@@ -751,7 +849,7 @@ abstract class Rule
     }
 
     /**
-     * 生成路由变量的正则规则
+     * 生成路由变量的正则
      * @access protected
      * @param string $name 路由变量
      * @param array $pattern 变量规则

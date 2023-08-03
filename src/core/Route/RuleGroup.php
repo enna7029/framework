@@ -53,7 +53,11 @@ class RuleGroup extends Rule
         $this->name = trim($name, '/');
         $this->rule = $rule;
 
+        //设置完整名称
         $this->setFullName();
+
+        //设置分组标识
+        $this->setGroupName();
 
         if ($this->parent) {
             $this->domain = $this->parent->getDomain();
@@ -78,7 +82,15 @@ class RuleGroup extends Rule
         } else {
             $this->fullName = $this->name;
         }
+    }
 
+    /**
+     * Note: 设置分组标识
+     * Date: 2023-07-31
+     * Time: 18:32
+     */
+    protected function setGroupName()
+    {
         if ($this->name) {
             $this->router->getRuleName()->setGroup($this->name, $this);
         }
@@ -181,48 +193,15 @@ class RuleGroup extends Rule
     }
 
     /**
-     * Note: 延迟解析分组的路由规则
-     * Date: 2022-10-27
-     * Time: 18:12
-     * @param bool $lazy 是否延迟解析
-     * @return $this
+     * Note: 获取分组的MISS路由
+     * Date: 2023-08-01
+     * Time: 11:06
+     * @return RuleItem|null
      */
-    public function lazy(bool $lazy = false)
+    public function getMissRule()
     {
-        if (!$lazy) {
-            $this->parseGroupRule($this->rule);
-            $this->rule = null;
-        }
-
-        return $this;
+        return $this->miss;
     }
-
-    /**
-     * Note: 解析域名和分组的路由规则
-     * Date: 2022-10-27
-     * Time: 18:20
-     * @param mixed $rule 路由规则
-     * @return void
-     */
-    public function parseGroupRule($rule)
-    {
-        if (is_string($rule) && is_subclass_of($rule, Dispatch::class)) {
-            $this->dispatcher($rule);
-            return;
-        }
-
-        $origin = $this->router->getGroup();
-        $this->router->setGroup($this);
-
-        if ($rule instanceof Closure) {
-            Container::getInstance()->invokeFunction($rule);
-        } elseif (is_string($rule) && $rule) {
-            $this->router->bind($rule, $this->domain);
-        }
-
-        $this->router->setGroup($origin);
-    }
-
 
     /**
      * Note: 检测分组路由
@@ -261,7 +240,7 @@ class RuleGroup extends Rule
 
         //合并路由规则,进行路由匹配检查
         if (!empty($option['merge_rule_regex'])) {
-            $result = $this->checkMergeRuleRegex($result, $rules, $url, $completeMatch);
+            $result = $this->checkMergeRuleRegex($request, $rules, $url, $completeMatch);
 
             if ($result !== false) {
                 return $result;
@@ -315,6 +294,49 @@ class RuleGroup extends Rule
     }
 
     /**
+     * Note: 延迟解析分组的路由规则
+     * Date: 2022-10-27
+     * Time: 18:12
+     * @param bool $lazy 是否延迟解析
+     * @return $this
+     */
+    public function lazy(bool $lazy = false)
+    {
+        if (!$lazy) {
+            $this->parseGroupRule($this->rule);
+            $this->rule = null;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Note: 解析域名和分组的路由规则
+     * Date: 2022-10-27
+     * Time: 18:20
+     * @param mixed $rule 路由规则
+     * @return void
+     */
+    public function parseGroupRule($rule)
+    {
+        if (is_string($rule) && is_subclass_of($rule, Dispatch::class)) {
+            $this->dispatcher($rule);
+            return;
+        }
+
+        $origin = $this->router->getGroup();
+        $this->router->setGroup($this);
+
+        if ($rule instanceof Closure) {
+            Container::getInstance()->invokeFunction($rule);
+        } elseif (is_string($rule) && $rule) {
+            $this->router->bind($rule, $this->domain);
+        }
+
+        $this->router->setGroup($origin);
+    }
+
+    /**
      * Note: 获取分组的路由规则
      * Date: 2022-10-29
      * Time: 14:40
@@ -333,6 +355,110 @@ class RuleGroup extends Rule
     }
 
     /**
+     * Note: 检测分组路由
+     * Date: 2023-08-01
+     * Time: 11:14
+     * @param Request $request 请求对象
+     * @param array $rules 路由规则
+     * @param string $url URL地址
+     * @param bool $completeMatch 路由是否完全匹配
+     * @return Dispatch|false
+     */
+    protected function checkMergeRuleRegex(Request $request, array &$rules, string $url, bool $completeMatch)
+    {
+        $depr = $this->router->config('pathinfo_depr');
+        $url = $depr . str_replace('|', $depr, $url);
+
+        $regex = [];
+        $items = [];
+        foreach ($rules as $key => $val) {
+            $item = $val[1];
+            if ($item instanceof RuleItem) {
+                $rule = $depr . str_replace('/', $depr, $item->getRule());
+
+                //对'/'的处理
+                if ($rule == $depr && $depr != $url) {
+                    unset($rules[$key]);
+                    continue;
+                }
+
+                //对没有路由变量的处理
+                $complete = $this->getOption('complete_match', $completeMatch);
+                if (strpos($rule, '<') === false) {
+                    if (strcasecmp($rule, $url) === 0 || (!$complete && strncasecmp($rule, $url, strlen($rule)) === 0)) {
+                        return $item->checkRule($request, $url, []);
+                    }
+
+                    unset($rules[$key]);
+                    continue;
+                }
+
+                //对含有路由变量的处理
+                $slash = preg_quote('/-' . $depr, '/');
+                if ($matchRule = preg_split('/[' . $slash . ']?<\w+\??>/', $rule, 2)) {
+                    if ($matchRule[0] && strncasecmp($rule, $url, strlen($matchRule[0])) !== 0) {
+                        unset($rules[$key]);
+                        continue;
+                    }
+                }
+                if (preg_match_all('/[' . $slash . ']?<?\w+\??>?/', $rule, $matches)) {
+                    unset($rules[$key]);
+                    $option = array_merge($this->getOption(), $item->getOption());
+                    $pattern = array_merge($this->getPattern(), $item->getPattern());
+                    $regex[$key] = $this->buildRuleRegex($rule, $matches[0], $pattern, $option, $completeMatch, '_ENNA_' . $key);
+                    $items[$key] = $item;
+                }
+            }
+        }
+
+        if (empty($regex)) {
+            return false;
+        }
+
+        try {
+            $result = preg_match('~^(?:' . implode('|', $regex) . ')~u', $url, $match);
+        } catch (\Exception $e) {
+            throw new Exception('route pattern error');
+        }
+        if ($result) {
+            //获取路由变量
+            $var = [];
+            foreach ($match as $key => $val) {
+                if (is_string($key) && $val !== '') {
+                    [$name, $pos] = explode('_ENNA_', $key);
+
+                    $var[$name] = $val;
+                }
+            }
+
+            //获取指定的位置
+            if (!isset($pos)) {
+                foreach ($regex as $key => $name) {
+                    if (strpos(str_replace(['\/', '\-', '\\' . $depr], ['/', '-', $depr], $item), $match[0]) === 0) {
+                        $pos = $key;
+                        break;
+                    }
+                }
+            }
+
+            //执行RuleItem
+            $rule = $items[$pos]->getRule();
+            $array = $this->router->getRule($rule);
+            foreach ($array as $item) {
+                if (in_array($item->getMethod(), ['*', strtolower($request->method())])) {
+                    $result = $item->checkRule($request, $url, $var);
+
+                    if ($result !== false) {
+                        return $result;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Note: 设置分组的路由前缀
      * Date: 2023-07-13
      * Time: 10:36
@@ -346,6 +472,21 @@ class RuleGroup extends Rule
         }
 
         return $this->setOption('prefix', $prefix);
+    }
+
+    /**
+     * Note: 设置路由分组别名
+     * Date: 2023-08-01
+     * Time: 11:10
+     * @param string $alias 路由分组别名
+     * @return $this
+     */
+    public function alias(string $alias)
+    {
+        $this->alias = $alias;
+        $this->router->getRuleName()->setGroup($alias, $this);
+
+        return $this;
     }
 
     /**
@@ -373,15 +514,13 @@ class RuleGroup extends Rule
     }
 
     /**
-     * Note: 是否去除URL最后的斜线
-     * Date: 2023-07-13
-     * Time: 18:09
-     * @param bool $remove 是否去除最后的斜线
-     * @return $this
+     * Note: 清空分组下的路由规则
+     * Date: 2023-08-01
+     * Time: 11:02
+     * @return void
      */
-    public function removeSlash(bool $remove = false)
+    public function clear()
     {
-        return $this->setOption('remove_slash', $remove);
+        $this->rules = [];
     }
-
 }

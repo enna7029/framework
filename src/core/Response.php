@@ -57,7 +57,7 @@ abstract class Response
      * 是否允许请求缓存
      * @var bool
      */
-    protected $allowCache;
+    protected $allowCache = true;
 
     /**
      * 输出参数
@@ -232,6 +232,33 @@ abstract class Response
     }
 
     /**
+     * Note: 获取状态码
+     * Date: 2023-08-03
+     * Time: 16:59
+     * @return int
+     */
+    public function getCode()
+    {
+        return $this->code;
+    }
+
+    /**
+     * Note: 获取头部信息
+     * Date: 2023-08-03
+     * Time: 17:28
+     * @param string $name 名称
+     * @return mixed
+     */
+    public function getHeader(string $name = '')
+    {
+        if (!empty($name)) {
+            return $this->header[$name] ?? null;
+        }
+
+        return $this->header;
+    }
+
+    /**
      * Note: 要处理的数据
      * Date: 2022-10-26
      * Time: 14:36
@@ -256,7 +283,7 @@ abstract class Response
     }
 
     /**
-     * Note: 是否允许缓存
+     * Note: 设置是否允许缓存
      * Date: 2023-03-13
      * Time: 16:37
      * @param bool $cache 输出缓存
@@ -267,6 +294,17 @@ abstract class Response
         $this->allowCache = $cache;
 
         return $this;
+    }
+
+    /**
+     * Note: 获取是否允许缓存
+     * Date: 2023-08-03
+     * Time: 17:02
+     * @return bool
+     */
+    public function isAllowCache()
+    {
+        return $this->allowCache;
     }
 
     /**
