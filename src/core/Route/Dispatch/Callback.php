@@ -5,6 +5,11 @@ namespace Enna\Framework\Route\Dispatch;
 
 use Enna\Framework\Route\Dispatch;
 
+/**
+ * 闭包调度器:用户访问闭包
+ * Class Callback
+ * @package Enna\Framework\Route\Dispatch
+ */
 class Callback extends Dispatch
 {
     public function exec()

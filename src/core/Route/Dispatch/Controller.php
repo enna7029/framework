@@ -12,6 +12,11 @@ use ReflectionMethod;
 use ReflectionException;
 use Enna\Framework\Helper\Str;
 
+/**
+ * 控制器调度器:用户访问控制器/方法
+ * Class Controller
+ * @package Enna\Framework\Route\Dispatch
+ */
 class Controller extends Dispatch
 {
     /**
@@ -87,7 +92,7 @@ class Controller extends Dispatch
                 }
 
                 $data = $this->app->invokeReflectMethod($instance, $reflect, $vars);
-         
+
                 return $data;
             });
     }

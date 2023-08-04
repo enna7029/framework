@@ -403,6 +403,17 @@ class Route
     }
 
     /**
+     * Note: 获取域名
+     * Date: 2023-08-04
+     * Time: 18:26
+     * @return array
+     */
+    public function getDomains()
+    {
+        return $this->domains;
+    }
+
+    /**
      * Note: 设置路由绑定
      * Date: 2022-10-26
      * Time: 18:27
@@ -787,6 +798,7 @@ class Route
                 return Response::create('', 'html', 204)->header(['Allow' => 'GET,POST,PUT,DELETE']);
             });
         }
+
         return new UrlDispatch($this->request, $this->group, $url);
     }
 
@@ -836,6 +848,20 @@ class Route
         }
 
         return $item;
+    }
+
+    /**
+     * Note: 读取路由标识
+     * Date: 2023-08-04
+     * Time: 11:41
+     * @param string $name 路由标识
+     * @param string $domain 域名
+     * @param string $method 请求类型
+     * @return array
+     */
+    public function getName(string $name = null, string $domain = null, string $method = '*')
+    {
+        return $this->ruleName->getName($name, $domain, $method);
     }
 
     /**
