@@ -199,7 +199,7 @@ class Url
             }
         }
 
-        if (!empty($url) && $match = $this->getRuleUrl($url, $vars, $domain)) {
+        if (!empty($url) && $match = $this->getRuleUrl($rule, $vars, $domain)) {
             $url = $match[0];
             if ($domain && !empty($match[1])) {
                 $domain = $match[1];
@@ -401,7 +401,7 @@ class Url
     protected function parseSuffix($suffix)
     {
         if ($suffix) {
-            $suffix = $suffix === true ? $this->route->confing('url_html_suffix') : $suffix;
+            $suffix = $suffix === true ? $this->route->config('url_html_suffix') : $suffix;
 
             if (is_string($suffix) && $pos = strpos($suffix, '|')) {
                 $suffix = substr($suffix, 0, $pos);

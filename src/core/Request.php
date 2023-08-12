@@ -7,13 +7,54 @@ use ArrayAccess;
 use Enna\Framework\Route\Rule;
 use Enna\Framework\File\UploadFile;
 
+/**
+ * 请求管理类
+ * Class Request
+ * @package Enna\Framework
+ */
 class Request implements ArrayAccess
 {
+    /**
+     * 兼容PATH_INFO获取
+     * @var array
+     */
+    protected $pathinfoFetch = [];
+
     /**
      * PATHINFO变量名,用于兼容模式
      * @var string
      */
     protected $varPathinfo = 's';
+
+    /**
+     * 请求类型伪装变量
+     * @var string
+     */
+    protected $varMethod = '_method';
+
+    /**
+     * 表单ajax伪装变脸
+     * @var string
+     */
+    protected $varAjax = '_ajax';
+
+    /**
+     * HTTPS代理标识
+     * @var string
+     */
+    protected $httpsAgentName = '';
+
+    /**
+     * 前端代理服务器IP
+     * @var array
+     */
+    protected $proxyServerIp = [];
+
+    /**
+     * 前端代理服务器真实IP头
+     * @var array
+     */
+    protected $proxyServerIpHeader = ['HTTP_X_REAL_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_CLIENT_IP', 'HTTP_X_CLIENT_IP', 'HTTP_X_CLUSTER_CLIENT_IP'];
 
     /**
      * 是否合并参数
@@ -43,7 +84,7 @@ class Request implements ArrayAccess
      * PUT参数
      * @var array
      */
-    protected $put = [];
+    protected $put;
 
     /**
      * REQUEST参数
@@ -94,10 +135,28 @@ class Request implements ArrayAccess
     protected $cookie = [];
 
     /**
-     * PATH_INFO
+     * 访问ROOT地址
+     * @var string
+     */
+    protected $root;
+
+    /**
+     * pathinfo
      * @var string
      */
     protected $pathinfo;
+
+    /**
+     * pathinfo(不含后缀)
+     * @var string
+     */
+    protected $path;
+
+    /**
+     * 当前请求的IP地址
+     * @var string
+     */
+    protected $realIP;
 
     /**
      * 当前host(含端口)
@@ -106,16 +165,28 @@ class Request implements ArrayAccess
     protected $host;
 
     /**
+     * 域名(含协议及端口)
+     * @var string
+     */
+    protected $domain;
+
+    /**
      * 根域名
      * @var string
      */
-    protected $rootDomain;
+    protected $rootDomain = '';
 
     /**
      * 子域名
      * @var string
      */
     protected $subDomain;
+
+    /**
+     * 泛域名
+     * @var string
+     */
+    protected $panDomain;
 
     /**
      * 当前URL地址
@@ -164,6 +235,12 @@ class Request implements ArrayAccess
     ];
 
     /**
+     * 当前请求内容
+     * @var string
+     */
+    protected $content;
+
+    /**
      * Env对象
      * @var Env
      */
@@ -192,6 +269,12 @@ class Request implements ArrayAccess
      * @var string
      */
     protected $action;
+
+    /**
+     * 请求安全Key
+     * @var bool
+     */
+    protected $secureKey;
 
     public function __construct()
     {
@@ -259,35 +342,186 @@ class Request implements ArrayAccess
     }
 
     /**
-     * Note: 获取content-type数据格式
-     * Date: 2022-09-29
-     * Time: 14:06
-     * @return string
+     * Note: 获取当前请求参数
+     * Date: 2022-09-30
+     * Time: 15:59
+     * @param string|array $name 变量名
+     * @param null $default 默认值
+     * @param string $filter 过滤方法
+     * @return mixed
      */
-    public function contentType()
+    public function param($name = '', $default = null, $filter = '')
     {
-        $contentType = $this->header('Content-Type');
+        if (empty($this->mergeParam)) {
+            $method = $this->method(true);
 
-        if ($contentType) {
-            if (strpos($contentType, ';')) {
-                [$type] = explode(';', $contentType);
-            } else {
-                $type = $contentType;
+            // 自动获取请求变量
+            switch ($method) {
+                case 'POST':
+                    $vars = $this->post(false);
+                    break;
+                case 'PUT':
+                case 'DELETE':
+                case 'PATCH':
+                    $vars = $this->put(false);
+                    break;
+                default:
+                    $vars = [];
             }
 
-            return trim($type);
+            $this->param = array_merge($this->param, $this->get(false), $vars, $this->route(false));
+
+            $this->mergeParam = true;
         }
 
-        return '';
+        if (is_array($name)) {
+            return $this->only($name, $this->param, $filter);
+        }
+
+        return $this->input($this->param, $name, $default, $filter);
     }
 
     /**
-     * Note: 设置或获取当前header信息
+     * Note: 获取包含文件在内的请求参数
+     * Date: 2023-08-11
+     * Time: 16:42
+     * @param string|array $name 变量名
+     * @param string|array $filter 过滤方法
+     * @return mixed
+     */
+    public function all($name = '', $filter = '')
+    {
+        $data = array_merge($this->param, $this->file ?: []);
+
+        if (is_array($name)) {
+            $data = $this->only($name, $data, $filter);
+        } else {
+            $data = $data[$name] ?? null;
+        }
+
+        return $data;
+    }
+
+    /**
+     * Note: 获取POST请求参数
+     * Date: 2022-09-30
+     * Time: 16:13
+     * @param string|array $name 变量名
+     * @param mixed $default 默认值
+     * @param string|array $filter 过滤方法
+     * @return mixed
+     */
+    public function post($name = '', $default = null, $filter = '')
+    {
+        if (is_array($name)) {
+            return $this->only($name, $this->post, $filter);
+        }
+
+        return $this->input($this->post, $name, $default, $filter);
+    }
+
+    /**
+     * Note: 获取GET请求参数
+     * Date: 2022-09-30
+     * Time: 17:51
+     * @param string|array $name 变量名
+     * @param mixed $default 默认值
+     * @param string|array $filter 过滤方法
+     * @return
+     */
+    public function get($name = '', $default = null, $filter = '')
+    {
+        if (is_array($name)) {
+            return $this->only($name, $this->get, $filter);
+        }
+
+        return $this->input($this->get, $name, $default, $filter);
+    }
+
+    /**
+     * Note: 获取中间件传递的参数
+     * Date: 2023-07-07
+     * Time: 14:23
+     * @param mixed $name 参数名
+     * @param mixed $default 默认值
+     * @return mixed
+     */
+    public function middleware($name, $default = null)
+    {
+        return $this->middleware[$name] ?? $default;
+    }
+
+    /**
+     * Note: 获取PUT参数
+     * Date: 2022-11-16
+     * Time: 14:43
+     * @param string|array $name 变量名
+     * @param mixed $default 默认值
+     * @param string|array $filter 过滤方法
+     * @return mixed
+     */
+    public function put($name = '', $default = null, $filter = '')
+    {
+        if (is_array($name)) {
+            return $this->only($name, $this->put, $filter);
+        }
+
+        return $this->input($this->put, $name, $default, $filter);
+    }
+
+    /**
+     * Note: 设置获取delete参数
+     * Date: 2023-08-11
+     * Time: 16:50
+     * @param string|array $name 变量名
+     * @param mixed $default 默认值
+     * @param string|array $filter 过滤方法
+     * @return mixed
+     */
+    public function delete($name = '', $default = null, $filter = '')
+    {
+        return $this->put($name, $default, $filter);
+    }
+
+    /**
+     * Note: 设置获取patch参数
+     * Date: 2023-08-11
+     * Time: 16:51
+     * @param string|array $name 变量名
+     * @param mixed $default 默认值
+     * @param string|array $filter 过滤方法
+     * @return mixed
+     */
+    public function patch($name = '', $default = null, $filter = '')
+    {
+        return $this->put($name, $default, $filter);
+    }
+
+    /**
+     * Note: 获取request变量
+     * Date: 2023-08-11
+     * Time: 16:54
+     * @param string|array $name 变量名
+     * @param mixed $default 默认值
+     * @param string|array $filter 过滤方法
+     * @return mixed
+     */
+    public function request($name = '', $default = null, $filter = '')
+    {
+        if (is_array($name)) {
+            return $this->only($name, $this->request, $filter);
+        }
+
+        return $this->input($this->request, $name, $default, $filter);
+    }
+
+    /**
+     * Note: 获取当前header信息
      * Date: 2022-09-29
      * Time: 14:12
      * @param string $name header名称
      * @param string $default 默认值
-     * @return string|array|null
+     * @return string|array
      */
     public function header(string $name = '', string $default = '')
     {
@@ -301,21 +535,156 @@ class Request implements ArrayAccess
     }
 
     /**
-     * Note: 当前请求的host
-     * Date: 2022-09-28
-     * Time: 18:29
-     * @param bool $strict 只获取host
-     * @return string
+     * Note: 获取变量,支持默认值和过滤
+     * Date: 2022-09-30
+     * Time: 16:15
+     * @param array $data 数据
+     * @param string $name 字段名
+     * @param mixed $default 默认值
+     * @param string|array $filter 过滤函数
+     * @return mixed
      */
-    public function host(bool $strict = false): string
+    public function input(array $data = [], $name = '', $default = null, $filter = '')
     {
-        if ($this->host) {
-            return $this->host;
-        } else {
-            $host = strval($this->server('HTTP_X_FORWARDED_HOST') ?: $this->server('HTTP_HOST'));
+        if (empty($name)) {
+            return $data;
         }
 
-        return $strict === true && strpos($host, ':') ? strstr($host, ':', true) : $host;
+        if ($name) {
+            if (strpos($name, '/')) {
+                [$name, $type] = explode('/', $name);
+            }
+
+            $data = $this->getData($data, $name);
+            if (is_null($data)) {
+                return $default;
+            }
+            if (is_object($data)) {
+                return $data;
+            }
+        }
+
+        $data = $this->filterData($data, $filter, $name, $default);
+
+        if (isset($type) && $data !== $default) {
+            $this->typeCast($data, $type);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Note: 获取指定的参数
+     * Date: 2023-05-05
+     * Time: 18:07
+     * @param array $name 变量名
+     * @param string $data 数据
+     * @param string $filter 过滤方法
+     * @return array
+     */
+    public function only(array $name, $data = 'param', $filter = '')
+    {
+        $data = is_array($data) ? $data : $this->$data();
+
+        $item = [];
+        foreach ($name as $key => $val) {
+            if (is_int($key)) {
+                $default = null;
+                $key = $val;
+                if (!isset($data[$key])) {
+                    continue;
+                }
+            } else {
+                $default = $val;
+            }
+
+            $item[$key] = $this->filterData($data[$key] ?? $default, $filter, $key, $default);
+        }
+    }
+
+    /**
+     * Note: 排除指定参数获取
+     * Date: 2023-08-12
+     * Time: 16:22
+     * @param array $name 变量名
+     * @param string $type 变量类型
+     * @return mixed
+     */
+    public function except(array $name, string $type = 'param')
+    {
+        $param = $this->$type();
+
+        foreach ($name as $key) {
+            if (isset($param[$key])) {
+                unset($param[$key]);
+            }
+        }
+
+        return $param;
+    }
+
+    /**
+     * Note: 获取环境变量
+     * Date: 2023-08-11
+     * Time: 17:00
+     * @param string $name 数据名称
+     * @param string $default 默认值
+     * @return mixed
+     */
+    public function env(string $name = '', string $default = null)
+    {
+        if (empty($name)) {
+            return $this->env->get();
+        } else {
+            $name = strtolower($name);
+        }
+
+        return $this->env->get($name, $default);
+    }
+
+    /**
+     * Note: 获取session数据
+     * Date: 2023-08-11
+     * Time: 17:02
+     * @param string $name 数据名称
+     * @param string $default 默认值
+     * @return mixed
+     */
+    public function session(string $name = '', $default = null)
+    {
+        if ($name === '') {
+            return $this->session->all();
+        }
+
+        return $this->session->get($name, $default);
+    }
+
+    /**
+     * Note: 获取Cookie数据
+     * Date: 2023-02-28
+     * Time: 14:04
+     * @param string $name cookie名称
+     * @param mixed $default cookie默认值
+     * @param string|array $fiter 过滤方法
+     * @return mixed
+     */
+    public function cookie(string $name = '', $default = null, $filter = '')
+    {
+        if (!empty($name)) {
+            $data = $this->getData($this->cookie, $name, $default);
+        } else {
+            $data = $this->cookie;
+        }
+
+        $filter = $this->getFilter($filter, $default);
+
+        if (is_array($data)) {
+            array_walk_recursive($data, [$this, 'filterValue'], $filter);
+        } else {
+            $this->filterValue($data, $name, $filter);
+        }
+
+        return $data;
     }
 
     /**
@@ -335,149 +704,6 @@ class Request implements ArrayAccess
         }
 
         return $this->server[$name] ?? $default;
-    }
-
-    /**
-     * Note: 当前的请求方法
-     * User: enna
-     * Date: 2022-09-30
-     * Time: 10:28
-     * @return string
-     */
-    public function method()
-    {
-        if (!$this->method) {
-            if ($this->server('HTTP_X_HTTP_METHOD_OVERRIDE')) {
-                $this->method = $this->server('HTTP_X_HTTP_METHOD_OVERRIDE');
-            } else {
-                $this->method = $this->server('REQUEST_METHOD') ?: 'GET';
-            }
-        }
-
-        return $this->method;
-    }
-
-    /**
-     * Note: 获取当前请求URL的pathinfo信息,包含后缀
-     * Date: 2022-09-29
-     * Time: 15:52
-     * @return string
-     */
-    public function pathinfo()
-    {
-        if (is_null($this->pathinfo)) {
-            if (isset($this->get[$this->varPathinfo])) {
-                $pathinfo = $this->get[$this->varPathinfo];
-                unset($this->get[$this->varPathinfo]);
-                unset($_GET[$this->varPathinfo]);
-            } elseif ($this->server('PATH_INFO')) {
-                $pathinfo = $this->server('PATH_INFO');
-            }
-
-            $this->pathinfo = empty($pathinfo) || $pathinfo == '/' ? '' : ltrim($pathinfo, '/');
-        }
-
-        return $this->pathinfo;
-    }
-
-    /**
-     * Note: 当前URL的后缀
-     * Date: 2022-09-29
-     * Time: 18:03
-     * @return string
-     */
-    public function ext()
-    {
-        return pathinfo($this->pathinfo(), PATHINFO_EXTENSION);
-    }
-
-    /**
-     * Note: 获取当前请求参数
-     * Date: 2022-09-30
-     * Time: 15:59
-     * @param string $name 变量名
-     * @param null $default 默认值
-     * @param string $filter 过滤方法
-     * @return mixed
-     */
-    public function param($name = '', $default = null, $filter = '')
-    {
-        if (empty($this->mergeParam)) {
-            $method = $this->method();
-
-            // 自动获取请求变量
-            switch ($method) {
-                case 'POST':
-                    $vars = $this->post();
-                    break;
-                case 'PUT':
-                case 'DELETE':
-                case 'PATCH':
-                    $vars = $this->put();
-                    break;
-                default:
-                    $vars = [];
-            }
-
-            $this->param = array_merge($this->param, $this->get(), $vars, $this->route());
-
-            $this->mergeParam = true;
-        }
-
-        return $this->input($this->param, $name, $default, $filter);
-    }
-
-    /**
-     * Note: 获取POST请求参数
-     * Date: 2022-09-30
-     * Time: 16:13
-     * @param string $name 变量名
-     * @param null $default 默认值
-     * @param string $filter 过滤方法
-     */
-    public function post($name = '', $default = null, $filter = '')
-    {
-        return $this->input($this->post, $name, $default, $filter);
-    }
-
-    /**
-     * Note: 获取GET请求参数
-     * Date: 2022-09-30
-     * Time: 17:51
-     * @param string $name 变量名
-     * @param null $default 默认值
-     * @param string $filter 过滤方法
-     */
-    public function get($name = '', $default = null, $filter = '')
-    {
-        return $this->input($this->get, $name, $default, $filter);
-    }
-
-    /**
-     * Note: 获取中间件传递的参数
-     * Date: 2023-07-07
-     * Time: 14:23
-     * @param string $name 参数名
-     * @param mixed $default 默认值
-     * @return mixed
-     */
-    public function middleware(string $name, $default = null)
-    {
-        return $this->middleware[$name] ?? $default;
-    }
-
-    /**
-     * Note: 获取PUT参数
-     * Date: 2022-11-16
-     * Time: 14:43
-     * @param string $name 变量名
-     * @param null $default 默认值
-     * @param string $filter 过滤方法
-     * @return array|mixed|null
-     */
-    public function put($name = '', $default = null, $filter = '')
-    {
-        return $this->input($this->put, $name, $default, $filter);
     }
 
     /**
@@ -541,6 +767,20 @@ class Request implements ArrayAccess
                 }
 
                 $array[$key] = $item;
+            } else {
+                if ($file instanceof File) {
+                    $array[$key] = $file;
+                } else {
+                    if ($file['error'] > 0) {
+                        if ($name == $key) {
+                            $this->throwUploadError($file['error']);
+                        } else {
+                            continue;
+                        }
+                    }
+
+                    $array[$key] = new UploadFile($file['tmp_name'], $temp['name'], $temp['type'], $temp['error']);
+                }
             }
         }
 
@@ -569,56 +809,6 @@ class Request implements ArrayAccess
         $msg = $fileUploadErrors[$error];
 
         throw new Exception($msg, $error);
-    }
-
-    /**
-     * Note: 获取Cookie数据
-     * Date: 2023-02-28
-     * Time: 14:04
-     * @param string $name cookie名称
-     * @param mixed $default cookie默认值
-     * @param string $fiter 过滤方法
-     * @return mixed
-     */
-    public function cookie(string $name = '', $default = null, $filter = '')
-    {
-        if (!empty($name)) {
-            $data = $this->getData($this->cookie, $name, $default);
-        } else {
-            $data = $this->cookie;
-        }
-
-        $filter = $this->getFilter($filter, $default);
-
-        if (is_array($data)) {
-            array_walk_recursive($data, [$this, 'filterValue'], $filter);
-        } else {
-            $this->filterValue($data, $name, $filter);
-        }
-
-        return $data;
-    }
-
-    /**
-     * Note: 获取数据
-     * Date: 2023-02-28
-     * Time: 14:09
-     * @param array $data 数据源
-     * @param string $name 名称
-     * @param mixed $default 默认值
-     * @return mixed
-     */
-    protected function getData(array $data, string $name, $default = null)
-    {
-        foreach (explode('.', $name) as $val) {
-            if (isset($data[$val])) {
-                $data = $data[$val];
-            } else {
-                $data = $default;
-            }
-        }
-
-        return $data;
     }
 
     /**
@@ -666,38 +856,142 @@ class Request implements ArrayAccess
     }
 
     /**
-     * Note: 获取过滤后的值
-     * Date: 2023-02-28
-     * Time: 17:58
-     * @param mixed $value 过滤前的值
-     * @param mixed $name 过滤的值的名称
-     * @param array $filters 过滤方法+默认值
+     * Note: 设置路由规则对象
+     * Date: 2022-10-26
+     * Time: 14:10
+     * @param Rule $rule 路由规则对象
+     * @return $this
+     */
+    public function setRule(Rule $rule)
+    {
+        $this->rule = $rule;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取路由规则对象
+     * Date: 2022-10-26
+     * Time: 14:13
+     * @return Rule|null
+     */
+    public function rule()
+    {
+        return $this->rule;
+    }
+
+    /**
+     * Note: 设置路由变量
+     * Date: 2022-11-10
+     * Time: 17:16
+     * @param array $route 路由变量
+     * @return $this
+     */
+    public function setRoute(array $route)
+    {
+        $this->route = array_merge($this->route, $route);
+        $this->mergeParam = false;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取路由参数
+     * Date: 2022-09-30
+     * Time: 17:51
+     * @param string|array $name 变量名
+     * @param mixed $default 默认值
+     * @param string|array $filter 过滤方法
      * @return mixed
      */
-    public function filterValue(&$value, $name, $filters)
+    public function route($name = '', $default = null, $filter = '')
     {
-        $default = array_pop($filters);
+        if (is_array($name)) {
+            $this->only($name, $this->route, $filter);
+        }
+        return $this->input($this->route, $name, $default, $filter);
+    }
 
-        foreach ($filters as $filter) {
-            if (is_callable($filter)) {
-                $value = call_user_func($filter, $value);
-            } else {
-                if (is_string($filter) && strpos($filter, '/') !== false) {
-                    if (!preg_match($filter, $value)) {
-                        $value = $default;
-                        break;
-                    }
-                } elseif (!empty($filter)) {
-                    $value = filter_var($value, is_int($filter) ? $filter : filter_id($filter));
-                    if ($value === false) {
-                        $value = $default;
-                        break;
-                    }
-                }
-            }
+    /**
+     * Note: 设置当前控制器
+     * Date: 2022-10-09
+     * Time: 18:14
+     * @param string $controller
+     * @return $this
+     */
+    public function setController(string $controller)
+    {
+        $this->controller = $controller;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取当前的控制器名
+     * Date: 2023-08-08
+     * Time: 10:38
+     * @param bool $convert 转换为小写
+     * @return string
+     */
+    public function controller(bool $convert = false)
+    {
+        $name = $this->controller ?: '';
+
+        return $convert ? strtolower($name) : $name;
+    }
+
+    /**
+     * Note: 设置当前操作
+     * Date: 2022-10-09
+     * Time: 18:15
+     * @param string $action
+     * @return $this
+     */
+    public function setAction(string $action)
+    {
+        $this->action = $action;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取当前操作名
+     * Date: 2022-10-10
+     * Time: 17:50
+     * @paras bool $convert 转换为小写
+     * @return string
+     */
+    public function action(bool $convert = false)
+    {
+        $name = $this->action ?: '';
+
+        return $convert ? strtolower($name) : $name;
+    }
+
+    /**
+     * Note: 设置或者获取当前请求的content
+     * Date: 2023-08-11
+     * Time: 17:29
+     * @return string
+     */
+    public function getContent()
+    {
+        if (is_null($this->content)) {
+            $this->content = $this->input;
         }
 
-        return $value;
+        return $this->content;
+    }
+
+    /**
+     * Note: 获取当前请求的php://input
+     * Date: 2023-08-11
+     * Time: 17:30
+     * @return string
+     */
+    public function getInput()
+    {
+        return $this->input;
     }
 
     /**
@@ -733,75 +1027,38 @@ class Request implements ArrayAccess
     }
 
     /**
-     * Note: 设置路由变量
-     * Date: 2022-11-10
-     * Time: 17:16
-     * @param array $route 路由变量
-     * @return $this
-     */
-    public function setRoute(array $route)
-    {
-        $this->route = array_merge($this->route, $route);
-        $this->mergeParam = false;
-
-        return $this;
-    }
-
-    /**
-     * Note: 获取路由参数
-     * Date: 2022-09-30
-     * Time: 17:51
-     * @param string|array $name 变量名
-     * @param mixed $default 默认值
-     * @param string|array $filter 过滤方法
+     * Note: 获取过滤后的值
+     * Date: 2023-02-28
+     * Time: 17:58
+     * @param mixed $value 过滤前的值
+     * @param mixed $name 过滤的值的名称
+     * @param array $filters 过滤方法+默认值
      * @return mixed
      */
-    public function route($name = '', $default = null, $filter = '')
+    public function filterValue(&$value, $name, $filters)
     {
-        if (is_array($name)) {
-            $this->only($name, $this->route, $filter);
-        }
-        return $this->input($this->route, $name, $default, $filter);
-    }
+        $default = array_pop($filters);
 
-
-    /**
-     * Note: 获取变量,支持默认值和过滤
-     * Date: 2022-09-30
-     * Time: 16:15
-     * @param array $data 数据
-     * @param string $name 字段名
-     * @param null $default 默认值
-     * @param string $filter 过滤函数
-     * @return mixed
-     */
-    public function input(array $data = [], $name = '', $default = null, $filter = '')
-    {
-        if (empty($name)) {
-            return $data;
-        }
-
-        if ($name) {
-            if (strpos($name, '/')) {
-                [$name, $type] = explode('/', $name);
-            }
-
-            $data = $this->getData($data, $name);
-            if (is_null($data)) {
-                return $default;
-            }
-            if (is_object($data)) {
-                return $data;
+        foreach ($filters as $filter) {
+            if (is_callable($filter)) {
+                $value = call_user_func($filter, $value);
+            } else {
+                if (is_string($filter) && strpos($filter, '/') !== false) {
+                    if (!preg_match($filter, $value)) {
+                        $value = $default;
+                        break;
+                    }
+                } elseif (!empty($filter)) {
+                    $value = filter_var($value, is_int($filter) ? $filter : filter_id($filter));
+                    if ($value === false) {
+                        $value = $default;
+                        break;
+                    }
+                }
             }
         }
 
-        $data = $this->filterData($data, $filter, $name, $default);
-
-        if (isset($type) && $data !== $default) {
-            $this->typeCast($data, $type);
-        }
-
-        return $data;
+        return $value;
     }
 
     /**
@@ -868,45 +1125,716 @@ class Request implements ArrayAccess
     }
 
     /**
-     * Note: 当前是否为JSON请求
+     * Note: 获取数据
+     * Date: 2023-02-28
+     * Time: 14:09
+     * @param array $data 数据源
+     * @param string $name 名称
+     * @param mixed $default 默认值
+     * @return mixed
+     */
+    protected function getData(array $data, string $name, $default = null)
+    {
+        foreach (explode('.', $name) as $val) {
+            if (isset($data[$val])) {
+                $data = $data[$val];
+            } else {
+                $data = $default;
+            }
+        }
+
+        return $data;
+    }
+
+    public function split()
+    {
+
+    }
+
+    /**
+     * Note: 获取根域名
+     * Date: 2022-10-28
+     * Time: 17:15
+     * @return string
+     */
+    public function rootDomain()
+    {
+        $root = $this->rootDomain;
+
+        if (is_null($root)) {
+            $item = explode(',', $this->host());
+            $count = count($item);
+            $root = $count > 1 ? $item[$count - 2] . '.' . $item[$count - 1] : $item[0];
+        }
+
+        return $root;
+    }
+
+    /**
+     * Note: 设置当前包含协议的域名
+     * Date: 2023-08-11
+     * Time: 14:08
+     * @param string $domain
+     * @return $this
+     */
+    public function setDomain(string $domain)
+    {
+        $this->domain = $domain;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取当前包含协议的域名
+     * Date: 2023-08-11
+     * Time: 14:09
+     * @param bool $port
+     * @return string
+     */
+    public function domain(bool $port = false)
+    {
+        return $this->scheme() . '://' . $this->host($port);
+    }
+
+    /**
+     * Note: 设置当前子域名
+     * Date: 2023-08-11
+     * Time: 14:25
+     * @param string $domain 域名
+     * @return $this
+     */
+    public function setSubDomain(string $domain)
+    {
+        $this->subDomain = $domain;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取当前子域名
+     * Date: 2022-10-28
+     * Time: 17:12
+     * @return string
+     */
+    public function subDomain()
+    {
+        if (is_null($this->subDomain)) {
+            $rootDomain = $this->rootDomain();
+
+            if ($rootDomain) {
+                $sub = stristr($this->host(), $rootDomain, true);
+                $this->subDomain = $sub ? rtrim($sub, '.') : '';
+            } else {
+                $this->subDomain = '';
+            }
+        }
+
+        return $this->subDomain;
+    }
+
+    /**
+     * Note: 设置当前泛域名的值
+     * Date: 2023-07-17
+     * Time: 17:51
+     * @param string $domain 域名
+     * @return $this
+     */
+    public function setPanDomain(string $domain)
+    {
+        $this->panDomain = $domain;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取当前泛域名值
+     * Date: 2023-07-17
+     * Time: 17:47
+     * @return string
+     */
+    public function panDomain()
+    {
+        return $this->panDomain ?: '';
+    }
+
+    /**
+     * Note: 设置当前请求的host(包含端口)
+     * Date: 2023-08-11
+     * Time: 18:36
+     * @param string $host 主机名(含端口)
+     * @return $this
+     */
+    public function setHost(string $host)
+    {
+        $this->host = $host;
+
+        return $this;
+    }
+
+    /**
+     * Note: 当前请求的host
+     * Date: 2022-09-28
+     * Time: 18:29
+     * @param bool $strict 只获取host
+     * @return string
+     */
+    public function host(bool $strict = false): string
+    {
+        if ($this->host) {
+            return $this->host;
+        } else {
+            $host = strval($this->server('HTTP_X_FORWARDED_HOST') ?: $this->server('HTTP_HOST'));
+        }
+
+        return $strict === true && strpos($host, ':') ? strstr($host, ':', true) : $host;
+    }
+
+    /**
+     * Note: 设置当前完整URL
+     * Date: 2023-07-12
+     * Time: 11:28
+     * @param string $url URL地址
+     * @return $this
+     */
+    public function setUrl(string $url)
+    {
+        $this->url = $url;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取当前完整URL
+     * Date: 2023-07-12
+     * Time: 9:43
+     * @param bool $complete 是否包含完整域名
+     * @return string
+     */
+    public function url(bool $complete = false)
+    {
+        if ($this->url) {
+            $url = $this->url;
+        } elseif ($this->server('HTTP_X_REWRITE_URL')) {
+            $url = $this->server('HTTP_X_REWRITE_URL');
+        } elseif ($this->server('REQUEST_URI')) {
+            $url = $this->server('REQUEST_URI');
+        } elseif ($this->server('ORIG_PATH_INFO')) {
+            $url = $this->server('ORIG_PATH_INFO') . (!empty($this->server('QUERY_STRING')) ? '?' . $this->server('QUERY_STRING') : '');
+        } elseif (isset($_SERVER['argv'][1])) {
+            $url = $_SERVER['argv'][1];
+        } else {
+            $url = '';
+        }
+
+        return $complete ? $this->domain() . $url : $url;
+    }
+
+    /**
+     * Note: 设置当前URL  不含QUERY_STRING
+     * Date: 2023-04-18
+     * Time: 15:35
+     * @param string $url URL地址
+     * @return $this
+     */
+    public function setBaseUrl(string $url)
+    {
+        $this->baseUrl = $url;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取当前URL 不含QUERY_STRING
+     * Date: 2023-04-18
+     * Time: 15:33
+     * @param bool $complete 是否包含完整域名
+     * @return string
+     */
+    public function baseUrl(bool $complete = false)
+    {
+        if (!$this->baseUrl) {
+            $str = $this->url();
+            $this->baseUrl = strpos($str, '?') ? strstr($str, '?', true) : $str;
+        }
+
+        return $complete ? $this->domain() . $this->baseUrl : $this->baseUrl;
+    }
+
+    /**
+     * Note: 获取当前执行的文件 SCRIPT_FILE
+     * Date: 2023-08-04
+     * Time: 17:55
+     * @param bool $complete 是否包含完整域名
+     * @return string
+     */
+    public function baseFile(bool $complete = true)
+    {
+        if (!$this->baseFile) {
+            $url = '';
+            if (!$this->isCli()) {
+                $script_name = basename($this->server('SCRIPT_FILENAME'));
+                if (basename($this->server('SCRIPT_NAME')) === $script_name) {
+                    $url = $this->server('SCRIPT_NAME');
+                } elseif (basename($this->server('PHP_SELF')) === $script_name) {
+                    $url = $this->server('PHP_SELF');
+                } elseif (basename($this->server('ORIG_SCRIPT_NAME')) === $script_name) {
+                    $url = $this->server('ORIG_SCRIPT_NAME');
+                } elseif (($pos = strpos($this->server('PHP_SELF'), '/' . $script_name)) !== false) {
+                    $url = substr($this->server('SCRIPT_NAME'), 0, $pos) . '/' . $script_name;
+                } elseif ($this->server('DOCUMENT_ROOT') && strpos($this->server('SCRIPT_FILENAME'), $this->server('DOCUMENT_ROOT')) === 0) {
+                    $url = str_replace('\\', '/', str_replace($this->server('DOCUMENT_ROOT'), '', $this->server('SCRIPT_FILENAME')));
+                }
+            }
+
+            $this->baseFile = $url;
+        }
+
+        return $complete ? $this->domain() . $this->baseFile : $this->baseFile;
+    }
+
+    /**
+     * Note: 设置URL访问根地址
+     * Date: 2023-08-11
+     * Time: 14:27
+     * @param string $url URL根地址
+     * @return $this
+     */
+    public function setRoot(string $url)
+    {
+        $this->root = $url;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取URL
+     * Date: 2023-08-11
+     * Time: 14:34
+     * @param bool $complete
+     * @return string
+     */
+    public function root(bool $complete = false)
+    {
+        if (!$this->root) {
+            $file = $this->baseFile();
+            if ($file && strpos($this->url(), $file) !== 0) {
+                $file = str_replace('\\', '/', dirname($file));
+            }
+
+            $this->root = rtrim($file, '/');
+        }
+
+        return $complete ? $this->domain() . $this->root : $this->root;
+    }
+
+    /**
+     * Note: 获取URL访问根地址
+     * Date: 2023-08-11
+     * Time: 14:48
+     * @return array|string
+     */
+    public function rootUrl()
+    {
+        $base = $this->url();
+        $root = strpos($base, '.') ? ltrim(dirname($base), DIRECTORY_SEPARATOR) : $base;
+
+        if ($root != '') {
+            $root = '/' . ltrim($root, '/');
+        }
+
+        return $root;
+    }
+
+    /**
+     * Note: 设置当前请求的pathinfo
+     * Date: 2023-08-11
+     * Time: 14:51
+     * @param string $pathinfo 路径信息
+     * @return $this
+     */
+    public function setPathinfo(string $pathinfo)
+    {
+        $this->pathinfo = $pathinfo;
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取当前请求URL的pathinfo信息,包含后缀
+     * Date: 2022-09-29
+     * Time: 15:52
+     * @return string
+     */
+    public function pathinfo()
+    {
+        if (is_null($this->pathinfo)) {
+            if (isset($this->get[$this->varPathinfo])) {
+                $pathinfo = $this->get[$this->varPathinfo];
+                unset($this->get[$this->varPathinfo]);
+                unset($_GET[$this->varPathinfo]);
+            } elseif ($this->server('PATH_INFO')) {
+                $pathinfo = $this->server('PATH_INFO');
+            } elseif (strpos(PHP_SAPI, 'cli') !== false) {
+                $pathinfo = strpos($this->server('REQUEST_URI'), '?') ? strstr($this->server('REQUEST_URI'), '?', TRUE) : $this->server('REQUEST_URI');
+            }
+
+            if (!isset($pathinfo)) {
+                foreach ($this->pathinfoFetch as $type) {
+                    if ($this->server($type)) {
+                        $pathinfo = strpos($this->server($type), $this->server('SCRIPT_NAME')) === 0 ? substr($this->server($type), strlen($this->server('SCRIPT_NAME'))) : $this->server($type);
+                        break;
+                    }
+                }
+            }
+
+            if (isset($pathinfo) && !empty($pathinfo)) {
+                unset($this->get[$pathinfo], $this->request[$pathinfo]);
+            }
+
+            $this->pathinfo = empty($pathinfo) || $pathinfo == '/' ? '' : ltrim($pathinfo, '/');
+        }
+
+        return $this->pathinfo;
+    }
+
+    /**
+     * Note: 设置请求类型
+     * Date: 2023-08-11
+     * Time: 15:20
+     * @param string $method 请求类型
+     * @return $this
+     */
+    public function setMethod(string $method)
+    {
+        $this->method = $method;
+
+        return $this;
+    }
+
+    /**
+     * Note: 当前的请求类型
+     * User: enna
+     * Date: 2022-09-30
+     * Time: 10:28
+     * @param bool $origin 是否获取原始请求类型
+     * @return string
+     */
+    public function method(bool $origin = false)
+    {
+        if ($origin) {
+            return $this->server('REQUEST_METHOD') ?: 'GET';
+        } elseif (!$this->method) {
+            if (isset($this->post[$this->varMethod])) {
+                $method = strtolower($this->post[$this->varMethod]);
+                if (in_array($method, ['get', 'post', 'put', 'delete', 'patch'])) {
+                    $this->method = strtoupper($method);
+                    $this->{$method} = $this->post;
+                } else {
+                    $this->method = 'POST';
+                }
+                unset($this->post[$this->varMethod]);
+            } elseif ($this->server('HTTP_X_HTTP_METHOD_OVERRIDE')) {
+                $this->method = strtoupper($this->server('HTTP_X_HTTP_METHOD_OVERRIDE'));
+            } else {
+                $this->method = $this->server('REQUEST_METHOD') ?: 'GET';
+            }
+        }
+
+        return $this->method;
+    }
+
+    /**
+     * Note: 当前URL地址中scheme参数
+     * Date: 2023-08-11
+     * Time: 14:10
+     * @return string
+     */
+    public function scheme()
+    {
+        return $this->isSsl() ? 'https' : 'http';
+    }
+
+    /**
+     * Note: 获取客户端IP地址
+     * Date: 2023-08-12
+     * Time: 16:40
+     * @return string
+     */
+    public function ip()
+    {
+        if (!empty($this->realIP)) {
+            return $this->realIP;
+        }
+
+        $this->realIP = $this->server('REMOTE_ADDR', '');
+
+        $proxyIp = $this->proxyServerIp;
+        $proxyIpHeader = $this->proxyServerIpHeader;
+
+
+        if (count($proxyIp) > 0 && count($proxyIpHeader) > 0) {
+            // 从指定的HTTP头中依次尝试获取IP地址
+            foreach ($proxyIpHeader as $header) {
+                $tempIP = $this->server($header);
+
+                if (empty($tempIP)) {
+                    continue;
+                }
+
+                $tempIP = trim(explode(',', $tempIP)[0]);
+
+                if (!$this->isValidIP($tempIP)) {
+                    $tempIP = null;
+                } else {
+                    break;
+                }
+            }
+
+            //检查REMOTE_ADDR是不是指定的前端代理服务器之一
+            if (!empty($tempIP)) {
+                $realIPBin = $this->ip2bin($this->realIP);
+
+                foreach ($proxyIp as $ip) {
+                    $serverIPElements = explode('/', $ip);
+                    $serverIP = $serverIPElements[0];
+                    $serverIPPrefix = $serverIPElements[1] ?? 128;
+                    $serverIPBin = $this->ip2bin($serverIP);
+
+                    if (strlen($realIPBin) !== strlen($serverIPBin)) {
+                        continue;
+                    }
+
+                    if (strncmp($realIPBin, $serverIPBin, $serverIPPrefix) === 0) {
+                        $this->realIP = $tempIP;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!$this->isValidIP($this->realIP)) {
+            $this->realIP = '0.0.0.0';
+        }
+
+        return $this->realIP;
+    }
+
+    /**
+     * Note: 检测是否是合法的IP地址
+     * Date: 2023-08-12
+     * Time: 16:45
+     * @param string $ip IP地址
+     * @param string $type IP地址类型
+     * @return bool
+     */
+    public function isValidIP(string $ip, string $type = '')
+    {
+        switch ($type) {
+            case 'ipv4':
+                $flag = FILTER_FLAG_IPV4;
+                break;
+            case 'ipv6':
+                $flag = FILTER_FLAG_IPV6;
+                break;
+            default:
+                $flag = 0;
+                break;
+        }
+
+        return boolval(filter_var($ip, FILTER_VALIDATE_IP, $flag));
+    }
+
+    /**
+     * Note: 将IP地址转换为二进制字符串
+     * Date: 2023-08-12
+     * Time: 17:13
+     * @param string $ip IP地址
+     * @return string
+     */
+    public function ip2bin(string $ip)
+    {
+        if ($this->isValidIP($ip, 'ipv6')) {
+            $IPHex = str_split(bin2hex(inet_pton($ip)), 4);
+            foreach ($IPHex as $key => $value) {
+                $IPHex[$key] = intval($value, 16);
+            }
+
+            $IPBin = vsprintf('%016b%016b%016b%016b%016b%016b%016b%016b', $IPHex);
+        } else {
+            $IPHex = str_split(bin2hex(inet_pton($ip)), 2);
+            foreach ($IPHex as $key => $value) {
+                $IPHex[$key] = intval($value, 16);
+            }
+
+            $IPBin = vsprintf('%08b%08b%08b%08b', $IPHex);
+        }
+
+        return $IPBin;
+    }
+
+    /**
+     * Note: 当前URL地址中的scheme参数
+     * Date: 2023-08-11
+     * Time: 18:33
+     * @return string
+     */
+    public function query()
+    {
+        return $this->server('QUERY_STRING', '');
+    }
+
+    /**
+     * Note: 当前请求URL地址中的port参数
+     * Date: 2023-08-08
+     * Time: 10:35
+     * @return int
+     */
+    public function port()
+    {
+        return (int)($this->server('HTTT_X_FORWARDED_PORT') ?: $this->server('SERVER_PORT'));
+    }
+
+    /**
+     * Note: 获取当前请求的端口
+     * Date: 2023-08-12
+     * Time: 17:33
+     * @return int
+     */
+    public function remotePort()
+    {
+        return (int)$this->server('REMOTE_PORT', '');
+    }
+
+    /**
+     * Note: 获取当前请求的协议
+     * Date: 2023-08-12
+     * Time: 17:33
+     * @return string
+     */
+    public function protocol()
+    {
+        return $this->server('SERVER_PROTOCOL', '');
+    }
+
+    /**
+     * Note: 获取content-type数据格式
+     * Date: 2022-09-29
+     * Time: 14:06
+     * @return string
+     */
+    public function contentType()
+    {
+        $contentType = $this->header('Content-Type');
+
+        if ($contentType) {
+            if (strpos($contentType, ';')) {
+                [$type] = explode(';', $contentType);
+            } else {
+                $type = $contentType;
+            }
+
+            return trim($type);
+        }
+
+        return '';
+    }
+
+    /**
+     * Note: 获取当前请求的安全key
+     * Date: 2023-08-12
+     * Time: 17:35
+     * @return bool|string
+     */
+    public function secureKey()
+    {
+        if (is_null($this->secureKey)) {
+            $this->secureKey = uniqid('', true);
+        }
+
+        return $this->secureKey;
+    }
+
+    /**
+     * Note: 当前URL的后缀
+     * Date: 2022-09-29
+     * Time: 18:03
+     * @return string
+     */
+    public function ext()
+    {
+        return pathinfo($this->pathinfo(), PATHINFO_EXTENSION);
+    }
+
+    /**
+     * Note: 获取请求的时间
+     * Date: 2023-08-11
+     * Time: 15:10
+     * @param bool $float
+     * @return array|mixed|string
+     */
+    public function time(bool $float = false)
+    {
+        return $float ? $this->server('REQUEST_TIME_FLOAT') : $this->server('REQUEST_TIME');
+    }
+
+    /**
+     * Note: 请求的资源类型
      * Date: 2022-10-09
-     * Time: 14:15
-     * @return bool
+     * Time: 14:20
+     * @return string
      */
-    public function isJson()
+    public function type()
     {
-        $acceptType = $this->type();
+        $accept = $this->server('HTTP_ACCEPT');
 
-        return strpos($acceptType, 'json') !== false;
+        if (empty($accept)) {
+            return '';
+        }
+
+        foreach ($this->mimeType as $key => $val) {
+            $array = explode(',', $val);
+            foreach ($array as $k => $v) {
+                if (stristr($accept, $v)) {
+                    return $key;
+                }
+            }
+        }
+
+        return '';
     }
 
     /**
-     * Note: 当前是否为Ajax请求
-     * Date: 2022-10-29
-     * Time: 11:45
-     * @return bool
+     * Note: 设置资源类型
+     * Date: 2023-08-11
+     * Time: 15:14
+     * @param string|array $type 类型名
+     * @param string $val 资源类型
+     * @return void
      */
-    public function isAjax()
+    public function mimeType($type, $val = '')
     {
-        $value = $this->server('HTTP_X_REQUEST_WITH');
-        $result = $value && strtolower($value) == 'xmlhttprequest' ? true : false;
-
-        return $result;
+        if (is_array($type)) {
+            $this->mimeType = array_merge($this->mimeType, $type);
+        } else {
+            $this->mimeType[$type] = $val;
+        }
     }
 
     /**
-     * Note: 当前是否为ssl
-     * Date: 2022-10-29
-     * Time: 11:58
+     * Note: 检测是否使用手机访问
+     * Date: 2023-08-12
+     * Time: 17:26
      * @return bool
      */
-    public function isSsl()
+    public function isMobile()
     {
-        if ($this->server('HTTPS') && ($this->server('HTTPS') == '1' || $this->server('HTTPS') == 'on')) {
+        if ($this->server('HTTP_VIA') && stristr($this->server('HTTP_VIA', 'wap'))) {
             return true;
-        } elseif ($this->server('REQUEST_SCHEME') == 'https') {
+        } elseif ($this->server('HTTP_ACCEPT') && strpos(strtoupper($this->server('HTTP_ACCEPT')), 'VND.WAP.WML')) {
             return true;
-        } elseif ($this->server('SERVER_PORT') == '443') {
+        } elseif ($this->server('HTTP_X_WAP_PROFILE') || $this->server('HTTP_PROFILE')) {
+            return true;
+        } elseif ($this->server('HTTP_USER_AGENT') && preg_match('/(blackberry|configuration\/cldc|hp |hp-|htc |htc_|htc-|iemobile|kindle|midp|mmp|motorola|mobile|nokia|opera mini|opera |Googlebot-Mobile|YahooSeeker\/M1A1-R2D2|android|iphone|ipod|mobi|palm|palmos|pocket|portalmmm|ppc;|smartphone|sonyericsson|sqh|spv|symbian|treo|up.browser|up.link|vodafone|windows ce|xda |xda_)/i', $this->server('HTTP_USER_AGENT'))) {
             return true;
         }
 
@@ -1013,135 +1941,63 @@ class Request implements ArrayAccess
     }
 
     /**
-     * Note: 请求的资源类型
+     * Note: 当前是否为JSON请求
      * Date: 2022-10-09
-     * Time: 14:20
-     * @return string
+     * Time: 14:15
+     * @return bool
      */
-    public function type()
+    public function isJson()
     {
-        $accept = $this->server('HTTP_ACCEPT');
+        $acceptType = $this->type();
 
-        if (empty($accept)) {
-            return '';
+        return strpos($acceptType, 'json') !== false;
+    }
+
+    /**
+     * Note: 当前是否为Ajax请求
+     * Date: 2022-10-29
+     * Time: 11:45
+     * @return bool
+     */
+    public function isAjax()
+    {
+        $value = $this->server('HTTP_X_REQUEST_WITH');
+        $result = $value && strtolower($value) == 'xmlhttprequest' ? true : false;
+
+        return $result;
+    }
+
+    public function isPjax()
+    {
+
+    }
+
+    /**
+     * Note: 当前是否为ssl
+     * Date: 2022-10-29
+     * Time: 11:58
+     * @return bool
+     */
+    public function isSsl()
+    {
+        if ($this->server('HTTPS') && ($this->server('HTTPS') == '1' || $this->server('HTTPS') == 'on')) {
+            return true;
+        } elseif ($this->server('REQUEST_SCHEME') == 'https') {
+            return true;
+        } elseif ($this->server('SERVER_PORT') == '443') {
+            return true;
+        } elseif ($this->server('HTTP_X_FORWARDED_PROTO') == 'https') {
+            return true;
+        } elseif ($this->httpsAgentName && $this->server($this->httpsAgentName)) {
+            return true;
         }
 
-        foreach ($this->mimeType as $key => $val) {
-            $array = explode(',', $val);
-            foreach ($array as $k => $v) {
-                if (stristr($accept, $v)) {
-                    return $key;
-                }
-            }
-        }
-
-        return '';
+        return false;
     }
 
-    /**
-     * Note: 设置路由规则对象
-     * Date: 2022-10-26
-     * Time: 14:10
-     * @param Rule $rule 路由规则对象
-     * @return $this
-     */
-    public function setRule(Rule $rule)
+    public function split2()
     {
-        $this->rule = $rule;
 
-        return $this;
-    }
-
-    /**
-     * Note: 获取路由规则对象
-     * Date: 2022-10-26
-     * Time: 14:13
-     * @return Rule|null
-     */
-    public function rule()
-    {
-        return $this->rule;
-    }
-
-
-    /**
-     * Note: 设置当前控制器
-     * Date: 2022-10-09
-     * Time: 18:14
-     * @param string $controller
-     * @return $this
-     */
-    public function setController(string $controller)
-    {
-        $this->controller = $controller;
-
-        return $this;
-    }
-
-    /**
-     * Note: 设置当前操作
-     * Date: 2022-10-09
-     * Time: 18:15
-     * @param string $action
-     * @return $this
-     */
-    public function setAction(string $action)
-    {
-        $this->action = $action;
-
-        return $this;
-    }
-
-    /**
-     * Note: 获取当前操作名
-     * Date: 2022-10-10
-     * Time: 17:50
-     * @return string
-     */
-    public function action()
-    {
-        return $this->action ?: '';
-    }
-
-    /**
-     * Note: 获取当前子域名
-     * Date: 2022-10-28
-     * Time: 17:12
-     * @return string
-     */
-    public function subDomain()
-    {
-        if (is_null($this->subDomain)) {
-            $rootDomain = $this->rootDomain();
-
-            if ($rootDomain) {
-                $sub = stristr($this->host(), $rootDomain, true);
-                $this->subDomain = $sub ? rtrim($sub, '.') : '';
-            } else {
-                $this->subDomain = '';
-            }
-        }
-
-        return $this->subDomain;
-    }
-
-    /**
-     * Note: 获取根域名
-     * Date: 2022-10-28
-     * Time: 17:15
-     * @return string
-     */
-    public function rootDomain()
-    {
-        $root = $this->rootDomain;
-
-        if (is_null($root)) {
-            $item = explode(',', $this->host());
-            $count = count($item);
-            $root = $count > 1 ? $item[$count - 2] . '.' . $item[$count - 1] : $item[0];
-        }
-
-        return $root;
     }
 
     /**
@@ -1198,6 +2054,62 @@ class Request implements ArrayAccess
     }
 
     /**
+     * Note: 设置中间件传递的数据
+     * Date: 2023-08-11
+     * Time: 17:36
+     * @param array $middleware 数据
+     * @return $this
+     */
+    public function withMiddleware(array $middleware)
+    {
+        $this->middleware = array_merge($this->middleware, $middleware);
+
+        return $this;
+    }
+
+    /**
+     * Note: 设置get数据
+     * Date: 2023-08-11
+     * Time: 17:37
+     * @param array $get 数据
+     * @return $this
+     */
+    public function withGet(array $get)
+    {
+        $this->get = $get;
+
+        return $this;
+    }
+
+    /**
+     * Note: 设置post数据
+     * Date: 2023-08-11
+     * Time: 17:38
+     * @param array $post 数据
+     * @return $this
+     */
+    public function withPost(array $post)
+    {
+        $this->post = $post;
+
+        return $this;
+    }
+
+    /**
+     * Note: 设置cookie数据
+     * Date: 2023-08-11
+     * Time: 17:39
+     * @param array $cookie 数据
+     * @return $this
+     */
+    public function withCookie(array $cookie)
+    {
+        $this->cookie = $cookie;
+
+        return $this;
+    }
+
+    /**
      * Note: 设置Session对象
      * Date: 2023-02-14
      * Time: 18:06
@@ -1212,170 +2124,94 @@ class Request implements ArrayAccess
     }
 
     /**
-     * Note: 设置当前完整URL
-     * Date: 2023-07-12
-     * Time: 11:28
-     * @param string $url URL地址
+     * Note: 设置server数据
+     * Date: 2023-08-11
+     * Time: 17:57
+     * @param array $server 数据
      * @return $this
      */
-    public function setUrl(string $url)
+    public function withServer(array $server)
     {
-        $this->url = $url;
+        $this->server = array_change_key_case($server, CASE_UPPER);
 
         return $this;
     }
 
     /**
-     * Note: 获取当前完整URL
-     * Date: 2023-07-12
-     * Time: 9:43
-     * @param bool $complete 是否包含完整域名
-     * @return string
+     * Note: 设置header数据
+     * Date: 2023-08-11
+     * Time: 17:58
+     * @param array $header 数据
+     * @return $this
      */
-    public function url(bool $complete = false)
+    public function withHeader(array $header)
     {
-        if ($this->url) {
-            $url = $this->url;
-        } elseif ($this->server('HTTP_X_REWRITE_URL')) {
-            $url = $this->server('HTTP_X_REWRITE_URL');
-        } elseif ($this->server('REQUEST_URI')) {
-            $url = $this->server('REQUEST_URI');
-        } elseif ($this->server('ORIG_PATH_INFO')) {
-            $url = $this->server('ORIG_PATH_INFO') . (!empty($this->server('QUERY_STRING')) ? '?' . $this->server('QUERY_STRING') : '');
-        } elseif (isset($_SERVER['argv'][1])) {
-            $url = $_SERVER['argv'][1];
-        } else {
-            $url = '';
-        }
+        $this->header = array_change_key_case($header);
 
-        return $complete ? $this->domain() . $url : $url;
-    }
-
-    public function setDomain()
-    {
-
-    }
-
-    public function domain()
-    {
-
+        return $this;
     }
 
     /**
-     * Note: 获取指定的参数
-     * Date: 2023-05-05
-     * Time: 18:07
-     * @param array $name 变量名
-     * @param string $data 数据
-     * @param string $filter 过滤方法
-     * @return array
+     * Note: 设置env数据
+     * Date: 2023-08-11
+     * Time: 17:59
+     * @param Env $env 数据
+     * @return $this
      */
-    public function only(array $name, $data = 'param', $filter = '')
+    public function withEnv(Env $env)
     {
-        $data = is_array($data) ? $data : $this->$data();
+        $this->env = $env;
 
-        $item = [];
-        foreach ($name as $key => $val) {
-            if (is_int($key)) {
-                $default = null;
-                $key = $val;
-                if (!isset($data[$key])) {
-                    continue;
-                }
-            } else {
-                $default = $val;
+        return $this;
+    }
+
+    /**
+     * Note: 设置file数据
+     * Date: 2023-08-11
+     * Time: 18:00
+     * @param array $files
+     * @return $this
+     */
+    public function withFiles(array $files)
+    {
+        $this->file = $files;
+
+        return $this;
+    }
+
+    /**
+     * Note: 设置route变量
+     * Date: 2023-08-11
+     * Time: 17:24
+     * @param array $route 数据
+     * @return $this
+     */
+    public function withRoute(array $route)
+    {
+        $this->route = $route;
+
+        return $this;
+    }
+
+    /**
+     * Note: 设置php://input数据
+     * Date: 2023-08-11
+     * Time: 18:03
+     * @param string $input RAW数据
+     * @return $this
+     */
+    public function withInput(string $input)
+    {
+        $this->input = $input;
+        if (!empty($input)) {
+            $inputData = $this->getInputData($input);
+            if (!empty($inputData)) {
+                $this->post = $inputData;
+                $this->put = $inputData;
             }
-
-            $item[$key] = $this->filterData($data[$key] ?? $default, $filter, $key, $default);
         }
-    }
-
-    /**
-     * Note: 设置当前URL  不含QUERY_STRING
-     * Date: 2023-04-18
-     * Time: 15:35
-     * @param string $url URL地址
-     * @return $this
-     */
-    public function setBaseUrl(string $url)
-    {
-        $this->baseUrl = $url;
 
         return $this;
-    }
-
-    /**
-     * Note: 获取当前URL 不含QUERY_STRING
-     * Date: 2023-04-18
-     * Time: 15:33
-     * @param bool $complete 是否包含完整域名
-     * @return string
-     */
-    public function baseUrl(bool $complete = false)
-    {
-        if (!$this->baseUrl) {
-            $str = $this->url();
-            $this->baseUrl = strpos($str, '?') ? strstr($str, '?', true) : $str;
-        }
-
-        return $complete ? $this->domain() . $this->baseUrl : $this->baseUrl;
-    }
-
-    /**
-     * Note: 获取当前执行的文件 SCRIPT_FILE
-     * Date: 2023-08-04
-     * Time: 17:55
-     * @param bool $complete 是否包含完整域名
-     * @return string
-     */
-    public function baseFile(bool $complete = true)
-    {
-        if (!$this->baseFile) {
-            $url = '';
-            if (!$this->isCli()) {
-                $script_name = basename($this->server('SCRIPT_FILENAME'));
-                if (basename($this->server('SCRIPT_NAME')) === $script_name) {
-                    $url = $this->server('SCRIPT_NAME');
-                } elseif (basename($this->server('PHP_SELF')) === $script_name) {
-                    $url = $this->server('PHP_SELF');
-                } elseif (basename($this->server('ORIG_SCRIPT_NAME')) === $script_name) {
-                    $url = $this->server('ORIG_SCRIPT_NAME');
-                } elseif (($pos = strpos($this->server('PHP_SELF'), '/' . $script_name)) !== false) {
-                    $url = substr($this->server('SCRIPT_NAME'), 0, $pos) . '/' . $script_name;
-                } elseif ($this->server('DOCUMENT_ROOT') && strpos($this->server('SCRIPT_FILENAME'), $this->server('DOCUMENT_ROOT')) === 0) {
-                    $url = str_replace('\\', '/', str_replace($this->server('DOCUMENT_ROOT'), '', $this->server('SCRIPT_FILENAME')));
-                }
-            }
-
-            $this->baseFile = $url;
-        }
-
-        return $complete ? $this->domain() . $this->baseFile : $this->baseFile;
-    }
-
-    /**
-     * Note: 设置当前泛域名的值
-     * Date: 2023-07-17
-     * Time: 17:51
-     * @param string $domain 域名
-     * @return $this
-     */
-    public function setPanDomain(string $domain)
-    {
-        $this->panDomain = $domain;
-
-        return $this;
-    }
-
-    /**
-     * Note: 获取当前泛域名值
-     * Date: 2023-07-17
-     * Time: 17:47
-     * @return string
-     */
-    public function panDomain()
-    {
-        return $this->panDomain ?: '';
     }
 
     /**
@@ -1403,23 +2239,33 @@ class Request implements ArrayAccess
         return $this->middleware($name);
     }
 
+    /**
+     * Note: 检查中间件传递数据的值
+     * Date: 2023-08-10
+     * Time: 17:28
+     * @param string $name 名称
+     * @return bool
+     */
+    public function __isset(string $name)
+    {
+        return isset($this->middleware[$name]);
+    }
+
     public function offsetUnset($offset)
     {
-        // TODO: Implement offsetUnset() method.
     }
 
-    public function offsetExists($offset)
+    public function offsetExists($name)
     {
-        // TODO: Implement offsetExists() method.
+        return $this->has($name);
     }
 
-    public function offsetGet($offset)
+    public function offsetGet($name)
     {
-        // TODO: Implement offsetGet() method.
+        return $this->param($name);
     }
 
     public function offsetSet($offset, $value)
     {
-        // TODO: Implement offsetSet() method.
     }
 }

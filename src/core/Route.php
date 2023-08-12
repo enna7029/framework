@@ -12,7 +12,7 @@ use Enna\Framework\Route\RuleGroup;
 use Enna\Framework\Route\RuleItem;
 use Enna\Framework\Route\RuleName;
 use Enna\Framework\Route\Resource;
-use Enna\Framework\Route\Url;
+use Enna\Framework\Route\Url as UrlBuild;
 use Enna\Framework\Exception\RouteNotFoundException;
 use Enna\Framework\Route\Rule;
 
@@ -546,6 +546,32 @@ class Route
     }
 
     /**
+     * Note: 读取路由列表
+     * Date: 2023-08-08
+     * Time: 11:09
+     * @return array
+     */
+    public function getRuleList()
+    {
+        return $this->ruleName->getRuleList();
+    }
+
+    /**
+     * Note: 清空路由规则
+     * Date: 2023-08-08
+     * Time: 11:11
+     * @return void
+     */
+    public function clear()
+    {
+        $this->ruleName->clear();
+
+        if ($this->group) {
+            $this->group->clear();
+        }
+    }
+
+    /**
      * Note: 设置变量规则
      * Date: 2022-10-25
      * Time: 18:27
@@ -694,11 +720,11 @@ class Route
      * Time: 10:58
      * @param string $url 路由地址
      * @param array $vars 参数
-     * @return Url
+     * @return UrlBuild
      */
     public function buildUrl(string $url = '', array $vars = [])
     {
-        return $this->app->make(Url::class, [$this, $this->app, $url, $vars], true);
+        return $this->app->make(UrlBuild::class, [$this, $this->app, $url, $vars], true);
     }
 
     /**

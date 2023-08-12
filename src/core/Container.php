@@ -308,11 +308,11 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
      * Note: 执行对象参数
      * Date: 2022-09-14
      * Time: 11:42
-     * @param string $className 类型
+     * @param string $className 类名
      * @param array $vars 参数
      * @return mixed
      */
-    public function getObjectParam(string $className, array $vars)
+    public function getObjectParam(string $className, array &$vars)
     {
         $array = $vars;
         $value = array_shift($array);
@@ -323,6 +323,7 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
         } else {
             $result = $this->make($className);
         }
+
         return $result;
     }
 

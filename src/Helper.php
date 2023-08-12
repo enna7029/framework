@@ -2,10 +2,13 @@
 
 use Enna\Framework\Container;
 use Enna\Framework\App;
+use Enna\Framework\Request;
 use Enna\Framework\Validate;
 use Enna\Framework\Event;
 use Enna\Framework\Route\Url;
 use Enna\Framework\Facade\Route;
+use Enna\Framework\Response;
+use Enna\Framework\Exception\HttpResponseException;
 
 if (!function_exists('app')) {
     /**
@@ -146,6 +149,15 @@ if (!function_exists('class_basename')) {
     }
 }
 
+if (!function_exists('halt')) {
+    function halt(...$vars)
+    {
+        dump(...$vars);
+
+        throw new HttpResponseException(Response::create());
+    }
+}
+
 if (!function_exists('dump')) {
     /**
      * Note: 浏览器友好的变量输出
@@ -238,5 +250,77 @@ if (!function_exists('url')) {
     function url(string $url = '', array $vars = [], $suffix = true, $domain = false)
     {
         return Route::buildUrl($url, $vars)->suffix($suffix)->domain($domain);
+    }
+}
+
+if (!function_exists('parse_name')) {
+    /**
+     * Note: 字符串命名风格转换
+     * Date: 2023-08-09
+     * Time: 15:18
+     * @param string $name 字符串
+     * @param int $type 转换类型
+     * @param bool $ucfirst 首字母是否大写
+     * @return string
+     */
+    function parse_name(string $name = '', int $type = 0, bool $ucfirst = true)
+    {
+        if ($type) {
+            $name = preg_replace_callback('/_(a-zA-Z)/', function ($match) {
+                return strtolower($match[1]);
+            }, $name);
+
+            return $ucfirst ? ucfirst($name) : lcfirst($name);
+        }
+
+        return strtolower(trim(str_replace('/[A-Z]/', '_\\0', $name), '_'));
+    }
+}
+
+if (!function_exists('request')) {
+    /**
+     * Note: 获取当前Request对象实例
+     * Date: 2023-08-09
+     * Time: 18:14
+     * @return Request
+     */
+    function request()
+    {
+        return app('request');
+    }
+}
+
+if (!function_exists('input')) {
+    /**
+     * Note: 获取输入数据 支持默认值和过滤
+     * Date: 2023-08-09
+     * Time: 17:58
+     * @param string $key 获取的变量名
+     * @param mixed $default 默认值
+     * @param string $filter 过滤方法
+     * @return mixed
+     */
+    function input(string $key = '', $default = null, $filter = '')
+    {
+        if (strpos($key, '?') === 0) {
+            $key = substr($key, 1);
+            $has = true;
+        }
+
+        if ($pos = strpos($key, '.')) {
+            $method = substr($key, 0, $pos);
+            if (in_array($method, ['get', 'post', 'patch', 'delete', 'route', 'param', 'request', 'session', 'cookie', 'server', 'env', 'path', 'file'])) {
+                $key = substr($key, $pos + 1);
+                if ($method == 'server' && is_null($default)) {
+                    $default = '';
+                }
+            } else {
+                $method = 'param';
+            }
+        } else {
+            $method = 'param';
+        }
+
+        return isset($has) ? request()->has($key, $method) : request()->$method($key, $default, $filter);
     }
 }
