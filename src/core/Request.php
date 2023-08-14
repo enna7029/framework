@@ -39,6 +39,12 @@ class Request implements ArrayAccess
     protected $varAjax = '_ajax';
 
     /**
+     * 表单pjax伪装变量
+     * @var string
+     */
+    protected $varPjax = '_pjax';
+
+    /**
      * HTTPS代理标识
      * @var string
      */
@@ -1146,11 +1152,6 @@ class Request implements ArrayAccess
         return $data;
     }
 
-    public function split()
-    {
-
-    }
-
     /**
      * Note: 获取根域名
      * Date: 2022-10-28
@@ -1957,19 +1958,37 @@ class Request implements ArrayAccess
      * Note: 当前是否为Ajax请求
      * Date: 2022-10-29
      * Time: 11:45
+     * @param bool $ajax true:获取原始ajax请求
      * @return bool
      */
-    public function isAjax()
+    public function isAjax(bool $ajax = false)
     {
         $value = $this->server('HTTP_X_REQUEST_WITH');
         $result = $value && strtolower($value) == 'xmlhttprequest' ? true : false;
 
-        return $result;
+        if ($ajax === true) {
+            return $result;
+        }
+
+        return $this->param($this->varAjax) ? true : $result;
     }
 
-    public function isPjax()
+    /**
+     * Note: 当前是否Pjax请求
+     * Date: 2023-08-14
+     * Time: 14:45
+     * @param bool $pjax true:获取原始pjax请求
+     * @return bool
+     */
+    public function isPjax(bool $pjax = false)
     {
+        $result = !empty($this->server('HTTP_X_PJAX')) ? true : false;
 
+        if ($pjax === true) {
+            return $result;
+        }
+
+        return $this->param($this->varPjax) ? true : $result;
     }
 
     /**
@@ -1993,11 +2012,6 @@ class Request implements ArrayAccess
         }
 
         return false;
-    }
-
-    public function split2()
-    {
-
     }
 
     /**
