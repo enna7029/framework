@@ -8,6 +8,11 @@ use Enna\Framework\Service\ValidateService;
 use Enna\Framework\Service\PaginatorService;
 use Enna\Framework\Service\ModelService;
 
+/**
+ * 注册系统服务
+ * Class RegisterService
+ * @package Enna\Framework\Initializer
+ */
 class RegisterService
 {
     /**

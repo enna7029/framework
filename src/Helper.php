@@ -7,8 +7,10 @@ use Enna\Framework\Validate;
 use Enna\Framework\Event;
 use Enna\Framework\Route\Url;
 use Enna\Framework\Facade\Route;
+use Enna\Framework\Facade\Session;
 use Enna\Framework\Response;
 use Enna\Framework\Exception\HttpResponseException;
+use Enna\Framework\Exception\HttpException;
 
 if (!function_exists('app')) {
     /**
@@ -324,3 +326,149 @@ if (!function_exists('input')) {
         return isset($has) ? request()->has($key, $method) : request()->$method($key, $default, $filter);
     }
 }
+
+if (!function_exists('response')) {
+    /**
+     * Note: 创建普通Response对象实例
+     * Date: 2023-08-16
+     * Time: 12:02
+     * @param mixed $data 返回的数据
+     * @param int $code 返回的状态码
+     * @param array $header 头部
+     * @param string $type 类型
+     * @return Response
+     */
+    function response($data = '', $code = 200, $header = [], $type = 'html')
+    {
+        return Response::create($data, $type, $code)->header($header);
+    }
+}
+
+if (!function_exists('json')) {
+    /**
+     * Note: 获取Enna\Framework\Response\Json对象实例
+     * Date: 2023-08-16
+     * Time: 11:49
+     * @param array $data 返回的数据
+     * @param int $code 返回的状态码
+     * @param array $header 头部
+     * @param array $options 参数
+     * @return \Enna\Framework\Response\Json
+     */
+    function json($data = [], $code = 200, $header = [], $options = [])
+    {
+        return Response::create($data, 'json', $code)->header($header)->options($options);
+    }
+}
+
+if (!function_exists('redirect')) {
+    /**
+     * Note: 获取\Enna\Framework\Response\Redirect对象实例
+     * Date: 2023-08-16
+     * Time: 15:09
+     * @param string $url 重定向地址
+     * @param int $code 状态码
+     * @return \Enna\Framework\Response\Redirect
+     */
+    function redirect(string $url = '', int $code = 302)
+    {
+        return Response::create($url, 'redirect', $code);
+    }
+}
+
+if (!function_exists('download')) {
+    /**
+     * Note: 获取\Enna\Framework\Response\File对象实例
+     * Date: 2023-08-16
+     * Time: 15:31
+     * @param string $filename 要下载的文件
+     * @param string $name 显示文件名
+     * @param bool $content 是否为内容
+     * @param int $expire 有效期(秒)
+     * @return Enna\Framework\Response\File
+     */
+    function download(string $filename = '', string $name = '', bool $content = false, int $expire = 180)
+    {
+        return Response::create($filename, 'file')->name($name)->isContent($content)->expire($expire);
+    }
+}
+
+if (!function_exists('jsonp')) {
+    /**
+     * Note: 获取Enna\Framework\Response\Jsonp对象实例
+     * Date: 2023-08-21
+     * Time: 16:32
+     * @param array $data 返回的数据
+     * @param int $code 状态码
+     * @param array $header 头部
+     * @param array $options 参数
+     * @return Enna\Framework\Response\Jsonp
+     */
+    function jsonp($data = [], $code = 200, $header = [], $options = [])
+    {
+        return Response::create($data, 'jsonp', $code)->header($header)->options($options);
+    }
+}
+
+if (!function_exists('xml')) {
+    /**
+     * Note: 获取\Enna\Framework\Response\Xml 对象实例
+     * Date: 2023-08-21
+     * Time: 16:34
+     * @param array $data 返回的数据
+     * @param int $code 状态码
+     * @param array $header 头部
+     * @param array $options 参数
+     * @return Enna\Framework\Response\Xml
+     */
+    function xml($data = [], $code = 200, $header = [], $options = [])
+    {
+        return Response::create($data, 'xml', $code)->header($header)->options($options);
+    }
+}
+
+if (!function_exists('session')) {
+    /**
+     * Note: Session管理
+     * Date: 2023-08-16
+     * Time: 15:15
+     * @param string $name session名称
+     * @param string $value session值
+     * @return mixed
+     */
+    function session($name = '', $value = '')
+    {
+        if (is_null($name)) { //清楚
+            Session::clear();
+        } elseif ($name === '') { //获取所有
+            return Session::all();
+        } elseif (is_null($value)) { //删除
+            Session::delete($name);
+        } elseif ($value === '') { //判断或获取
+            return strpos($name, '?') === 0 ? Session::has(substr($name, 1)) : Session::get($name);
+        } else { //设置
+            Session::set($name, $value);
+        }
+    }
+}
+
+if (!function_exists('abort')) {
+    /**
+     * Note: 抛出HTTP异常
+     * Date: 2023-08-23
+     * Time: 10:24
+     * @param int|Response $code 状态码|Response对象实例
+     * @param string $message 错误信息
+     * @param array $header 参数
+     * @throws \Enna\Framework\Exception\HttpResponseException|\Enna\Framework\Exception\HttpException
+     */
+    function abort($code, string $message = '', array $header = [])
+    {
+        if ($code instanceof Response) {
+            throw new HttpResponseException($code);
+        } else {
+            throw new HttpException($code, $message, null, $header);
+        }
+    }
+}
+

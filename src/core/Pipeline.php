@@ -105,9 +105,10 @@ class Pipeline
      * Note: 设置异常处理器
      * Date: 2022-09-23
      * Time: 11:02
-     * @param callable $handler
+     * @param callable $handler 异常处理器
+     * @return $this
      */
-    public function whenException($handler)
+    public function setException($handler)
     {
         $this->exceptionHandler = $handler;
 
@@ -118,8 +119,9 @@ class Pipeline
      * Note: 异常处理
      * Date: 2022-09-23
      * Time: 11:06
-     * @param Request $reqeust 请求类
-     * @param Throwable $e
+     * @param Request $reqeust 请求对象实例
+     * @param Throwable $e 抛出的异常
+     * @return mixed
      */
     public function handleException($reqeust, Throwable $e)
     {

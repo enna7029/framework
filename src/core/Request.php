@@ -562,6 +562,7 @@ class Request implements ArrayAccess
             }
 
             $data = $this->getData($data, $name);
+
             if (is_null($data)) {
                 return $default;
             }
@@ -606,6 +607,8 @@ class Request implements ArrayAccess
 
             $item[$key] = $this->filterData($data[$key] ?? $default, $filter, $key, $default);
         }
+
+        return $item;
     }
 
     /**
@@ -717,6 +720,7 @@ class Request implements ArrayAccess
      * Date: 2023-01-06
      * Time: 10:30
      * @param string $name 名称
+     * @return null|array|UploadFile
      */
     public function file(string $name = '')
     {
@@ -822,7 +826,7 @@ class Request implements ArrayAccess
      * Date: 2023-02-28
      * Time: 14:27
      * @param mixed $filter 过滤规则
-     * @return $this|array
+     * @return $this|mixed
      */
     public function filter($filter = null)
     {
@@ -843,7 +847,7 @@ class Request implements ArrayAccess
      * @param mixed $default 默认值
      * @return array
      */
-    public function getFilter(string $filter, $default)
+    protected function getFilter(string $filter, $default)
     {
         if (is_null($filter)) {
             $filter = [];
@@ -1011,13 +1015,17 @@ class Request implements ArrayAccess
      */
     public function has(string $name, string $type = 'param', bool $checkEmpty = false)
     {
-        if (!in_array($type, ['param,get,post,put,delete,header,server,request,file,cookie,session,env,route'])) {
+        if (!in_array($type, ['param', 'get', 'post', 'put', 'delete', 'header', 'server', 'request', 'file', 'cookie', 'session', 'env', 'route'])) {
             return false;
         }
 
         $param = empty($this->$type) ? $this->$type() : $this->$type;
 
-        foreach (explode(',', $param) as $val) {
+        if (is_object($param)) {
+            return $param->has($name);
+        }
+
+        foreach (explode('.', $name) as $val) {
             if (isset($param[$val])) {
                 $param = $param[$val];
             } else {
@@ -1071,25 +1079,16 @@ class Request implements ArrayAccess
      * Note: 过滤数据
      * Date: 2022-09-30
      * Time: 17:20
-     * @param array $data 数据
-     * @param string $filter 过滤器
+     * @param string|array $data 数据
+     * @param string|array $filter 过滤器
      * @param string $name 字段名
-     * @param null $default 默认值
+     * @param mixed $default 默认值
      * @return mixed
      */
-    protected function filterData(array $data, $filter = '', $name = '', $default = null)
+    protected function filterData($data, $filter = '', $name = '', $default = null)
     {
         //解析过滤器
-        if (!empty($filter)) {
-            if (strpos($filter, ',')) {
-                $filter = explode(',', $filter);
-            } else {
-                $filter = (array)$filter;
-            }
-        } else {
-            $filter = [];
-        }
-        $filter[] = $default;
+        $filter = $this->getFilter($filter, $default);
 
         if (is_array($data)) {
             array_walk_recursive($data, [$this, 'filterValue'], $filter);

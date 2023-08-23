@@ -6,8 +6,19 @@ namespace Enna\Framework\Response;
 use Enna\Framework\Exception;
 use Enna\Framework\Response;
 
+/**
+ * FILE格式响应
+ * Class File
+ * @package Enna\Framework\Response
+ */
 class File extends Response
 {
+    /**
+     * 文件名
+     * @var string
+     */
+    protected $name;
+
     /**
      * 缓存有效时间
      * @var int
@@ -15,10 +26,16 @@ class File extends Response
     protected $expire = 360;
 
     /**
-     * 文件名
+     * 是否为内容
+     * @var bool
+     */
+    protected $isContent = false;
+
+    /**
+     * mimeType类型
      * @var string
      */
-    protected $name;
+    protected $mimeType;
 
     /**
      * 是否强制下载
@@ -31,32 +48,46 @@ class File extends Response
         $this->init($data, $code);
     }
 
+    /**
+     * Note: 处理数据
+     * Date: 2023-08-21
+     * Time: 11:28
+     * @param mixed $data 要处理的数据
+     * @return false|string
+     * @throws Exception
+     */
     protected function output($data)
     {
-        if (!is_file($data)) {
+        if (!$this->isContent && !is_file($data)) {
             throw new Exception('file not exists:' . $data);
         }
 
         if (!empty($this->name)) {
             $name = $this->name;
         } else {
-            $name = pathinfo($data, PATHINFO_BASENAME);
+            $name = !$this->isContent ? pathinfo($data, PATHINFO_BASENAME) : '';
         }
 
-        $mimeType = $this->getMimeType($data);
-        $size = filesize($data);
+        if ($this->isContent) {
+            $mimeType = $this->mimeType;
+            $size = strlen($data);
+        } else {
+            $mimeType = $this->getMimeType($data);
+            $size = filesize($data);
+        }
 
-        $header['Pragma'] = 'public';
-        $header['Content-Type'] = $mimeType;
-        $header['Cache-control'] = 'max-age=' . $this->expire;
-        $header['Content-Disposition'] = ($this->force ? 'attachment; ' : '') . 'filename=' . $name;
-        $header['Content-length'] = $size;
-        $header['Content-Transfer-Encoding'] = 'binary';
-        $header['Expires'] = gmdate('D,d M Y H:i:s', time() + $this->expire) . ' GMT';
+
+        $this->header['Pragma'] = 'public';
+        $this->header['Content-Type'] = $mimeType ?: 'application/octet-stream';
+        $this->header['Cache-Control'] = 'max-age=' . $this->expire;
+        $this->header['Content-Disposition'] = ($this->force ? 'attachment; ' : '') . 'filename=' . $name;
+        $this->header['Content-length'] = $size;
+        $this->header['Content-Transfer-Encoding'] = 'binary';
+        $this->header['Expires'] = gmdate('D,d M Y H:i:s', time() + $this->expire) . ' GMT';
 
         $this->lastModified(gmdate('D, d M Y H:i:s', time()) . ' GMT');
 
-        return file_get_contents($data);
+        return $this->isContent ? $data : file_get_contents($data);
 
     }
 
@@ -80,29 +111,43 @@ class File extends Response
     }
 
     /**
-     * Note: 获取文件类型
-     * Date: 2023-03-13
-     * Time: 17:23
-     * @param string $filename 文件名
-     * @return string
-     */
-    protected function getMimeType(string $filename)
-    {
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-
-        return finfo_file($finfo, $filename);
-    }
-
-    /**
-     * Note: 设置有效期
-     * Date: 2023-03-13
-     * Time: 18:19
+     * Note: 设置缓存有效期
+     * Date: 2023-08-21
+     * Time: 11:55
      * @param int $expire 有效期
      * @return $this
      */
     public function expire(int $expire)
     {
         $this->expire = $expire;
+
+        return $this;
+    }
+
+    /**
+     * Note: 设置是否为内容
+     * Date: 2023-08-21
+     * Time: 11:52
+     * @param bool $content 是否为内容
+     * @return $this
+     */
+    public function isContent(bool $content = true)
+    {
+        $this->isContent = $content;
+
+        return $this;
+    }
+
+    /**
+     * Note: 设置文件类型
+     * Date: 2023-08-21
+     * Time: 11:56
+     * @param string $mimeType 类型
+     * @return $this
+     */
+    public function mimeType(string $mimeType)
+    {
+        $this->mimeType = $mimeType;
 
         return $this;
     }
@@ -119,5 +164,23 @@ class File extends Response
         $this->force = $force;
 
         return $this;
+    }
+
+    /**
+     * Note: 获取文件类型
+     * Date: 2023-03-13
+     * Time: 17:23
+     * @param string $filename 文件名
+     * @return string
+     */
+    protected function getMimeType(string $filename)
+    {
+        if (!empty($this->mimeType)) {
+            return $this->mimeType;
+        }
+
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+
+        return finfo_file($finfo, $filename);
     }
 }

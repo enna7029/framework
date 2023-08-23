@@ -9,6 +9,11 @@ use Enna\Framework\Request;
 use Enna\Framework\Session;
 use Enna\Framework\Response;
 
+/**
+ * REDIRECT格式响应
+ * Class Redirect
+ * @package Enna\Framework\Response
+ */
 class Redirect extends Response
 {
 
@@ -47,8 +52,9 @@ class Redirect extends Response
      * Note: 重定向传值(通过Session)
      * Date: 2023-03-13
      * Time: 16:50
-     * @param $name
-     * @param null $value
+     * @param string|array $name 变量名或数组
+     * @param mixed $value 值
+     * @return $this
      */
     public function with($name, $value = null)
     {

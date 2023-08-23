@@ -7,7 +7,13 @@ use Enna\Framework\Exception\ErrorException;
 use Enna\Framework\App;
 use Throwable;
 use Enna\Framework\Exception\Handle;
+use Enna\Framework\Console\Output;
 
+/**
+ * 错误和异常处理
+ * Class Error
+ * @package Enna\Framework\Initializer
+ */
 class Error
 {
     /**
@@ -29,10 +35,10 @@ class Error
      * Note: 自定义错误函数
      * Date: 2022-09-20
      * Time: 10:43
-     * @param int $errno 错误级别
+     * @param int $errno 错误编号
      * @param string $errstr 错误信息
-     * @param string $errfile 错误文件
-     * @param int $errline 错误行
+     * @param string $errfile 出错的文件
+     * @param int $errline 出错的行
      * @throws ErrorException
      */
     public function appError(int $errno, string $errstr, string $errfile = '', int $errline = 0): void
@@ -54,10 +60,11 @@ class Error
     public function appException(Throwable $e)
     {
         $handler = $this->getExceptionHandler();
+
         $handler->report($e);
 
         if ($this->app->runningInConsole()) {
-
+            $handler->renderForConsole(new Output, $e);
         } else {
             $handler->render($this->app->request, $e)->send();
             $this->app->log->save();

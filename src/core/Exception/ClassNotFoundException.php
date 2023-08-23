@@ -8,7 +8,6 @@ use Throwable;
 
 class ClassNotFoundException extends RuntimeException implements NotFoundExceptionInterface
 {
-
     public $class;
 
     public function __construct(string $message, string $class, Throwable $previous = null)

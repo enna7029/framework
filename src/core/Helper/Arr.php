@@ -120,40 +120,47 @@ class Arr
     }
 
     /**
-     * Note: 获取指定的数据
+     * Note: 从给定数组中删除一个或多个数组项
      * Date: 2023-03-02
      * Time: 11:52
      * @param array $data 数据源
-     * @param string $name 键(对多个键,使用.符号分隔)
+     * @param string|array $keys 键(对多个键,使用.符号分隔)
      * @return void
      */
-    public static function delete(&$data, $name)
+    public static function delete(&$array, $keys)
     {
-        $name = (array)$name;
+        $original = &$array;
 
-        if (count($name) === 0) {
+        $keys = (array)$keys;
+
+        if (count($keys) === 0) {
             return;
         }
 
-        foreach ($name as $item) {
-            if (array_key_exists($item, $data)) {
-                unset($data[$item]);
+        foreach ($keys as $key) {
+            // if the exact key exists in the top-level, remove it
+            if (static::exists($array, $key)) {
+                unset($array[$key]);
+
                 continue;
             }
 
-            $parts = explode('.', $item);
+            $parts = explode('.', $key);
+
+            // clean up before each pass
+            $array = &$original;
 
             while (count($parts) > 1) {
                 $part = array_shift($parts);
 
-                if (isset($data[$part]) && is_array($data[$part])) {
-                    $data =& $data[$part];
+                if (isset($array[$part]) && is_array($array[$part])) {
+                    $array = &$array[$part];
                 } else {
                     continue 2;
                 }
             }
 
-            unset($data[array_shift($parts)]);
+            unset($array[array_shift($parts)]);
         }
     }
 
@@ -236,5 +243,22 @@ class Arr
         }
 
         return static::first(array_reverse($array, true), $callback, $default);
+    }
+
+    /**
+     * Note: 查看数组中是否存在给定的key
+     * Date: 2023-08-22
+     * Time: 10:53
+     * @param array|\ArrayAccess $array
+     * @param string|int $key
+     * @return bool
+     */
+    public static function exists($array, $key)
+    {
+        if ($array instanceof ArrayAccess) {
+            return $array->offsetExists($key);
+        }
+
+        return array_key_exists($key, $array);
     }
 }

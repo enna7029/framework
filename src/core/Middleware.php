@@ -187,15 +187,15 @@ class Middleware
 
         return (new Pipeline())
             ->through($pipes)
-            ->whenException([$this, 'handleException']);
+            ->setException([$this, 'handleException']);
     }
 
     /**
      * Note: 异常处理
      * Date: 2022-12-02
      * Time: 18:19
-     * @param Request $passalbe
-     * @param Throwable $e
+     * @param Request $passalbe 请求对象实例
+     * @param Throwable $e 抛出的异常
      * @return Response
      */
     public function handleException($passable, Throwable $e)

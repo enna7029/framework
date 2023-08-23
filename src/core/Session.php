@@ -5,6 +5,11 @@ namespace Enna\Framework;
 
 use Enna\Framework\Session\Store;
 
+/**
+ * Class Session
+ * @package Enna\Framework
+ * @mixin Store
+ */
 class Session extends Manager
 {
     protected $namespace = '\\Enna\\Framework\\Session\\Driver\\';

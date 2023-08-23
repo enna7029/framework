@@ -6,10 +6,15 @@ namespace Enna\Framework\Response;
 use Enna\Framework\Response;
 use Enna\Framework\Cookie;
 
+/**
+ * HTML格式响应
+ * Class Html
+ * @package Enna\Framework\Response
+ */
 class Html extends Response
 {
     /**
-     * 设置header头Content-type的mime类型
+     * 设置header头Content-Type的mime类型
      * @var string
      */
     protected $contentType = 'text/html';

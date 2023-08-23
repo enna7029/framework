@@ -77,6 +77,7 @@ class Controller extends Dispatch
                         $reflect = new ReflectionMethod($instance, $action);
 
                         $actionName = $reflect->getName();
+
                         if ($suffix) {
                             $actionName = substr($actionName, 0, -strlen($suffix));
                         }

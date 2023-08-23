@@ -231,6 +231,20 @@ class Store
     }
 
     /**
+     * Note: 将本次闪存数据推迟到下次请求
+     * Date: 2023-08-21
+     * Time: 17:31
+     * @return void
+     */
+    public function reflash(): void
+    {
+        $keys = $this->get('__flash__.__current__', []);
+        $values = array_unique(array_merge($this->get('__flash__.__next__', []), $keys));
+        $this->set('__flash__.__next__', $values);
+        $this->set('__flash__.__current__', []);
+    }
+
+    /**
      * Note: 请求当前请求的flash数据
      * Date: 2023-03-07
      * Time: 11:46
@@ -239,7 +253,6 @@ class Store
     public function clearFlashData()
     {
         Arr::delete($this->data, $this->get('__flash__.__current__', []));
-
         if (!empty($next = $this->get('__flash__.__next__', []))) {
             $this->set('__flash__.__current__', $next);
         } else {

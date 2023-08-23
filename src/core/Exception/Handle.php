@@ -6,8 +6,10 @@ namespace Enna\Framework\Exception;
 use Enna\Framework\App;
 use Enna\Framework\Request;
 use Enna\Framework\Response;
+use Enna\Framework\Validate;
 use Throwable;
 use Exception;
+use Enna\Framework\Console\Output;
 
 /**
  * 系统异常处理类
@@ -17,21 +19,26 @@ use Exception;
 class Handle
 {
     /**
+     * APP对象实例
      * @var App
      */
     protected $app;
-
-    /**
-     * 忽略的报告
-     * @var array
-     */
-    protected $ignoreReport = [];
 
     /**
      * 是否JSON格式
      * @var bool
      */
     protected $isJson = false;
+
+    /**
+     * 忽略(不记录日志)的异常
+     * @var array
+     */
+    protected $ignoreReport = [
+        HttpException::class,
+        HttpResponseException::class,
+        ValidateException::class,
+    ];
 
     public function __construct(App $app)
     {
@@ -58,8 +65,8 @@ class Handle
                 $log = "[{$data['code']}]{$data['message']}[{$data['file']}:{$data['line']}]";
             } else {
                 $data = [
-                    'message' => $exception->getMessage(),
-                    'code' => $exception->getCode(),
+                    'code' => $this->getCode($exception),
+                    'message' => $this->getMessage($exception),
                 ];
                 $log = "[{$data['code']}]{$data['message']}";
             }
@@ -72,7 +79,27 @@ class Handle
     }
 
     /**
-     * Note: 是否忽略异常
+     * Note: 渲染异常到HTTP Response中
+     * Date: 2022-12-02
+     * Time: 18:29
+     * @param Request $request 请求对象实例
+     * @param Throwable $e 异常对象
+     * @return Response
+     */
+    public function render($request, Throwable $e)
+    {
+        $this->isJson = $request->isJson();
+        if ($e instanceof HttpResponseException) { //HTTP响应异常
+            return $e->getResponse();
+        } elseif ($e instanceof HttpException) { //HTTP异常
+            return $this->renderHttpException($e);
+        } else { //其他异常
+            return $this->convertExceptionToResponse($e);
+        }
+    }
+
+    /**
+     * Note: 是否属于忽略异常
      * Date: 2022-09-20
      * Time: 15:24
      * @param Throwable $exception 异常对象
@@ -89,18 +116,19 @@ class Handle
     }
 
     /**
-     * Note: 渲染异常到HTTP Response中
-     * Date: 2022-12-02
-     * Time: 18:29
-     * @param Request $request
-     * @param Throwable $e
+     * Note: 渲染HTTP异常
+     * Date: 2023-08-15
+     * Time: 17:58
+     * @param HttpException $e HTTP异常
      * @return Response
      */
-    public function render($request, Throwable $e)
+    protected function renderHttpException(HttpException $e)
     {
-        $this->isJson = $request->isJson();
-        if ($e instanceof HttpException) {
+        $status = $e->getStatusCode();
+        $template = $this->app->config->get('app.http_exception_template');
 
+        if (!$this->app->isDebug() && !empty($template[$status])) {
+            return Response::create($template[$status], 'view', $status)->assign(['e' => $e]);
         } else {
             return $this->convertExceptionToResponse($e);
         }
@@ -110,7 +138,7 @@ class Handle
      * Note: 将异常转换为响应
      * Date: 2022-12-05
      * Time: 11:20
-     * @param Throwable $exception
+     * @param Throwable $exception 异常对象
      * @return Response
      */
     protected function convertExceptionToResponse(Throwable $exception)
@@ -130,10 +158,27 @@ class Handle
     }
 
     /**
+     * Note: 将异常转换为字符串
+     * Date: 2022-12-05
+     * Time: 11:33
+     * @param Throwable $exception 异常对象
+     * @return string
+     */
+    protected function convertExceptionToContent(Throwable $exception)
+    {
+        ob_start();
+        $data = $this->convertExceptionToArray($exception);
+        extract($data);
+        include $this->app->config->get('app.exception_tmpl') ?: __DIR__ . '/../../tpl/default_exception.tpl';
+
+        return ob_get_clean();
+    }
+
+    /**
      * Note: 将异常转换为数组
      * Date: 2022-12-05
      * Time: 11:34
-     * @param Throwable $exception
+     * @param Throwable $exception 异常对象
      * @return array
      */
     protected function convertExceptionToArray(Throwable $exception)
@@ -164,8 +209,8 @@ class Handle
                     'POST Data' => $this->app->request->post(),
                     'Files' => $this->app->request->file(),
                     'Cookies' => $this->app->request->cookie(),
-                    'Session' => '',
-                    'Server Data' => $this->app->request->server(),
+                    'Session' => $this->app->exists('session') ? $this->app->session->all() : [],
+                    'Server/Request Data' => $this->app->request->server(),
                 ],
             ];
         } else {
@@ -183,27 +228,10 @@ class Handle
     }
 
     /**
-     * Note: 将异常转换为字符串
-     * Date: 2022-12-05
-     * Time: 11:33
-     * @param Throwable $exception
-     * @return string|false
-     */
-    protected function convertExceptionToContent(Throwable $exception)
-    {
-        ob_start();
-        $data = $this->convertExceptionToArray($exception);
-        extract($data);
-        include $this->app->config->get('app.exception_tmpl') ?: __DIR__ . '/../../tpl/default_exception.tpl';
-
-        return ob_get_clean();
-    }
-
-    /**
      * Note: 获取错误编码
      * Date: 2022-12-05
      * Time: 11:59
-     * @param Throwable $exception
+     * @param Throwable $exception 异常对象
      * @return int
      */
     protected function getCode(Throwable $exception)
@@ -230,6 +258,18 @@ class Handle
 
         if ($this->app->runningInConsole()) {
             return $message;
+        }
+
+        $lang = $this->app->lang;
+
+        if (strpos($message, ':')) {
+            $name = strstr($message, ':', true);
+            $message = $lang->has($name) ? $lang->get($name) . strstr($message, ':') : $message;
+        } elseif (strpos($message, ',')) {
+            $name = strstr($message, ',', true);
+            $message = $lang->has($name) ? $lang->has($name) . ':' . substr(strstr($message, ','), 1) : $message;
+        } elseif ($lang->has($message)) {
+            $message = $lang->get($message);
         }
 
         return $message;
@@ -278,4 +318,18 @@ class Handle
         return $data;
     }
 
+    /**
+     * Note: 渲染针对命名行的异常
+     * Date: 2023-08-23
+     * Time: 17:48
+     * @param Output $output
+     * @param Throwable $e
+     */
+    public function renderForConsole(Output $output, Throwable $e)
+    {
+        if ($this->app->isDebug()) {
+
+        }
+
+    }
 }
