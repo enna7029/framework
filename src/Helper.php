@@ -2,9 +2,10 @@
 
 use Enna\Framework\Container;
 use Enna\Framework\App;
+use Enna\Framework\Facade\Log;
 use Enna\Framework\Request;
 use Enna\Framework\Validate;
-use Enna\Framework\Event;
+use Enna\Framework\Facade\Event;
 use Enna\Framework\Route\Url;
 use Enna\Framework\Facade\Route;
 use Enna\Framework\Facade\Session;
@@ -228,8 +229,8 @@ if (!function_exists('event')) {
      * Note: 触发事件
      * Date: 2023-07-07
      * Time: 15:38
-     * @param $event
-     * @param null $args
+     * @param mixed $event 时间标识(或者类名)
+     * @param mixed $args 参数
      * @return mixed
      */
     function event($event, $args = null)
@@ -469,6 +470,25 @@ if (!function_exists('abort')) {
         } else {
             throw new HttpException($code, $message, null, $header);
         }
+    }
+}
+
+if (!function_exists('trace')) {
+    /**
+     * Note: 记录日志信息
+     * Date: 2023-08-24
+     * Time: 17:24
+     * @param mixed $log log信息
+     * @param string $level 日志级别
+     * @return array|void
+     */
+    function trace($log = '[debug]', string $level = 'log')
+    {
+        if ($log === '[debug]') {
+            return Log::getLog();
+        }
+
+        Log::record($log, $level);
     }
 }
 

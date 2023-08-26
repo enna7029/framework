@@ -11,7 +11,7 @@ use Enna\Framework\Event\LogWrite;
 class Channel
 {
     /**
-     * 渠道名称
+     * 通道名称
      * @var string
      */
     protected $name;
@@ -54,11 +54,11 @@ class Channel
 
     /**
      * Channel constructor.
-     * @param string $name 渠道名称
-     * @param LogHandlerInterface $logger 驱动
+     * @param string $name 通道名称
+     * @param LogHandlerInterface $logger 驱动对象实例
      * @param array $allow 允许记录的日志类型
      * @param bool $lazy 是否延迟写入
-     * @param Event|null $envent 事件
+     * @param Event $envent 事件
      */
     public function __construct(string $name, LogHandlerInterface $logger, array $allow, bool $lazy = true, Event $event = null)
     {
@@ -110,6 +110,16 @@ class Channel
         return $this;
     }
 
+    public function write()
+    {
+
+    }
+
+    public function getLog()
+    {
+        
+    }
+
     /**
      * Note: 保存日志
      * Date: 2022-12-08
@@ -119,10 +129,10 @@ class Channel
     public function save()
     {
         $log = $this->log;
-//        if ($this->event) {
-//            $event = new LogWrite($name, $log);
-//            $this->event->trigger($event);
-//        }
+        if ($this->event) {
+            $event = new LogWrite($name, $log);
+            $this->event->trigger($event);
+        }
 
         if ($this->logger->save($log)) {
             $this->clear();
@@ -140,5 +150,18 @@ class Channel
     public function clear()
     {
         $this->log = [];
+    }
+
+    /**
+     * Note: 关闭通道
+     * Date: 2023-08-26
+     * Time: 17:34
+     * @return void
+     */
+    public function close()
+    {
+        $this->close();
+
+        $this->close = true;
     }
 }

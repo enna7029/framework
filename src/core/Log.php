@@ -3,24 +3,43 @@ declare(strict_types=1);
 
 namespace Enna\Framework;
 
+use Enna\Framework\Event\LogWrite;
 use Enna\Framework\Log\Channel;
 use Enna\Framework\Log\ChannelSet;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
+use Enna\Framework\Helper\Arr;
 
 class Log extends Manager implements LoggerInterface
 {
-    const EMERGENCY = 'Emergency';
-    const ALERT = 'Alert';
-    const CRITICAL = 'Critical';
-    const ERROR = 'Error';
-    const WARNING = 'Warning';
-    const NOTICE = 'Notice';
+    const EMERGENCY = 'emergency';
+    const ALERT = 'alert';
+    const CRITICAL = 'critical';
+    const ERROR = 'error';
+    const WARNING = 'warning';
+    const NOTICE = 'notice';
     const INFO = 'info';
-    const DEBUG = 'Debug';
+    const DEBUG = 'debug';
+    const SQL = 'sql';
 
     //驱动的命名空间
     protected $namespace = '\\Enna\\Framework\\Log\\Driver\\';
+
+    /**
+     * Note: 获取通道实例
+     * Date: 2022-12-06
+     * Time: 16:36
+     * @param array|string|null $name 通道名称
+     * @return Channel|ChannelSet
+     */
+    public function channel($name = null)
+    {
+        if (is_array($name)) {
+            return new ChannelSet($this, $name);
+        }
+
+        return $this->driver($name);
+    }
 
     /**
      * Note: 获取默认驱动
@@ -34,66 +53,12 @@ class Log extends Manager implements LoggerInterface
     }
 
     /**
-     * Note: 获取渠道类型
-     * Date: 2022-12-07
-     * Time: 10:12
-     * @param string $name 渠道名称
-     * @return mixed|void
-     */
-    public function resolveType(string $name)
-    {
-        return $this->getChannelConfig($name, 'type', 'file');
-    }
-
-    /**
-     * Note: 获取渠道配置
-     * Date: 2022-12-07
-     * Time: 10:12
-     * @param string $name 渠道名称
-     * @return mixed|void
-     */
-    public function resolveConfig(string $name)
-    {
-        return $this->getChannelConfig($name);
-    }
-
-    /**
-     * Note: 获取渠道配置
-     * Date: 2022-12-07
-     * Time: 10:34
-     * @param string $channel 渠道名称
-     * @param null $name 渠道下的配置名称
-     * @param null $default 渠道下的配置默认值
-     * @return string|array|null
-     * @throws InvalidArgumentException
-     */
-    public function getChannelConfig($channel, $name = null, $default = null)
-    {
-        $config = $this->getConfig('channels.' . $channel);
-
-        if ($config) {
-            if (!is_null($name)) {
-                foreach ($config as $key => $item) {
-                    if ($name == $key && !empty($item)) {
-                        return $item;
-                    } else {
-                        return $default;
-                    }
-                }
-            } else {
-                return $config;
-            }
-        }
-
-        throw new InvalidArgumentException('渠道【' . $channel . '】未找到');
-    }
-
-    /**
      * Note: 获取日志配置
      * Date: 2022-12-06
      * Time: 15:30
      * @param string|null $name 名称
-     * @param null $default 默认值
+     * @param mixed $default 默认值
+     * @return mixed
      */
     public function getConfig(string $name = null, $default = null)
     {
@@ -105,56 +70,123 @@ class Log extends Manager implements LoggerInterface
     }
 
     /**
-     * Note: 获取渠道实例
-     * Date: 2022-12-06
-     * Time: 16:36
-     * @param array|string|null $name 渠道名称
-     * @return Channel|ChannelSet
+     * Note: 获取通道类型
+     * Date: 2022-12-07
+     * Time: 10:12
+     * @param string $name 渠道名称
+     * @return mixed|void
      */
-    public function channel($name = null)
+    public function resolveType(string $name)
     {
-        if (is_array($name)) {
-            return new ChannelSet($this, $name);
-        }
-
-        return $this->driver($name);
+        return $this->getChannelConfig($name, 'type', 'file');
     }
 
     /**
-     * Note: 记录日志信息
-     * Date: 2022-09-20
-     * Time: 16:42
-     * @param mixed $msg 信息
-     * @param string $type 级别
-     * @param array $context 内容
-     * @param bool $lazy 是否实时写入
-     * @return $this
+     * Note: 获取通道配置
+     * Date: 2022-12-07
+     * Time: 10:12
+     * @param string $name 渠道名称
+     * @return mixed
      */
-    public function record($msg, string $type = 'info', array $context = [], bool $lazy = true)
+    public function resolveConfig(string $name)
     {
+        return $this->getChannelConfig($name);
+    }
 
-        $channel = $this->getConfig('type_channel.' . $type);
+    /**
+     * Note: 获取通道配置
+     * Date: 2022-12-07
+     * Time: 10:34
+     * @param string $channel 渠道名称
+     * @param string $name 渠道下的配置名称
+     * @param mixed $default 渠道下的配置默认值
+     * @return string|array|null
+     * @throws InvalidArgumentException
+     */
+    public function getChannelConfig($channel, $name = null, $default = null)
+    {
+        if ($config = $this->getConfig('channels.' . $channel)) {
+            return Arr::get($config, $name, $default);
+        }
 
-        $this->channel($channel)->record($msg, $type, $context, $lazy);
-
-        return $this;
+        throw new InvalidArgumentException('通道【' . $channel . '】未找到');
     }
 
     /**
      * Note: 创建驱动实例
      * Date: 2022-12-07
      * Time: 10:14
-     * @param string $name 渠道名称
+     * @param string $name 通道名称
      * @return mixed|void
      */
     public function createDriver(string $name)
     {
-        $driver = parent::createDriver($name);
+        $driver = parent::createDriver($name); //获取驱动对象实例
 
         $lazy = !$this->getChannelConfig($name, 'realtime_write', false) && !$this->app->runningInConsole();
+        
         $allow = array_merge($this->getConfig('level', []), $this->getChannelConfig($name, 'level', []));
 
         return new Channel($name, $driver, $allow, $lazy, $this->app->event);
+    }
+
+    /**
+     * Note: 清空日志信息
+     * Date: 2023-08-26
+     * Time: 15:42
+     * @param string $channel 日志通道
+     * @return $this
+     */
+    public function clear($channel = '*')
+    {
+        if ($channel == '*') {
+            $channel = array_keys($this->drivers);
+        }
+
+        $this->channel($channel)->clear();
+
+        return $this;
+    }
+
+    /**
+     * Note: 关闭本次请求日志写入
+     * Date: 2023-08-26
+     * Time: 15:44
+     * @return $this
+     */
+    public function close()
+    {
+        if ($channel == '*') {
+            $channel = array_keys($this->drivers);
+        }
+
+        $this->channel($channel)->close();
+
+        return $this;
+    }
+
+    /**
+     * Note: 获取日志信息
+     * Date: 2023-08-26
+     * Time: 15:45
+     * @param string $channel 日志通道
+     * @return mixed
+     */
+    public function getLog(string $channel = null)
+    {
+        return $this->channel($channel)->getLog();
+    }
+
+    /**
+     * Note: 注册日志写入事件
+     * Date: 2023-08-26
+     * Time: 15:34
+     * @param mixed $listener 监听类(或闭包)
+     * @return Event
+     */
+    public function listen($listener)
+    {
+        return $this->app->event->listen(LogWrite::class, $listener);
     }
 
     /**
@@ -173,6 +205,39 @@ class Log extends Manager implements LoggerInterface
         }
 
         return true;
+    }
+
+    /**
+     * Note: 记录日志信息
+     * Date: 2022-09-20
+     * Time: 16:42
+     * @param mixed $msg 信息
+     * @param string $type 级别
+     * @param array $context 内容
+     * @param bool $lazy 是否实时写入
+     * @return $this
+     */
+    public function record($msg, string $type = 'info', array $context = [], bool $lazy = true)
+    {
+        $channel = $this->getConfig('type_channel.' . $type);
+
+        $this->channel($channel)->record($msg, $type, $context, $lazy);
+
+        return $this;
+    }
+
+    /**
+     * Note: 实时写入日志信息
+     * Date: 2023-08-26
+     * Time: 15:37
+     * @param mixed $msg 信息
+     * @param string $type 级别
+     * @param array $context 内容
+     * @return $this
+     */
+    public function write($msg, string $type = 'info', array $context = [])
+    {
+        return $this->record($msg, $type, $context, false);
     }
 
     /**
@@ -206,7 +271,7 @@ class Log extends Manager implements LoggerInterface
      * Note: 记录alert信息
      * Date: 2022-12-23
      * Time: 14:30
-     * @param string|\Stringable $message 日志信息
+     * @param mixed $message 日志信息
      * @param array $context 上下文内容
      * @return void
      */
@@ -219,7 +284,7 @@ class Log extends Manager implements LoggerInterface
      * Note: 记录critical信息
      * Date: 2022-12-23
      * Time: 14:31
-     * @param string|\Stringable $message 日志信息
+     * @param mixed $message 日志信息
      * @param array $context 上下文内容
      * @return void
      */
@@ -232,7 +297,7 @@ class Log extends Manager implements LoggerInterface
      * Note: 记录error信息
      * Date: 2022-12-23
      * Time: 14:45
-     * @param string|\Stringable $message 日志信息
+     * @param mixed $message 日志信息
      * @param array $context 上下文内容
      * @return void
      */
@@ -245,7 +310,7 @@ class Log extends Manager implements LoggerInterface
      * Note: 记录warning信息
      * Date: 2022-12-23
      * Time: 14:46
-     * @param string|\Stringable $message 日志内容
+     * @param mixed $message 日志内容
      * @param array $context 上下文内容
      * @return void
      */
@@ -258,7 +323,7 @@ class Log extends Manager implements LoggerInterface
      * Note: 记录notice信息
      * Date: 2022-12-23
      * Time: 14:47
-     * @param string|\Stringable $message 日志内容
+     * @param mixed $message 日志内容
      * @param array $context 上下文信息
      * @return void
      */
@@ -271,7 +336,7 @@ class Log extends Manager implements LoggerInterface
      * Note: 记录info信息
      * Date: 2022-12-23
      * Time: 14:47
-     * @param string|\Stringable $message 日志内容
+     * @param mixed $message 日志内容
      * @param array $context 上下文信息
      * @return void
      */
@@ -284,7 +349,7 @@ class Log extends Manager implements LoggerInterface
      * Note: 记录debug信息
      * Date: 2022-12-23
      * Time: 14:49
-     * @param string|\Stringable $message 日志内容
+     * @param mixed $message 日志内容
      * @param array $context 上下文信息
      * @return void
      */
@@ -293,6 +358,18 @@ class Log extends Manager implements LoggerInterface
         $this->log(__FUNCTION__, $message, $context);
     }
 
+    /**
+     * Note: 记录sql信息
+     * Date: 2023-08-26
+     * Time: 11:12
+     * @param mixed $message 日志信息
+     * @param array $context 替换内容
+     * @return void
+     */
+    public function sql($message, array $context = [])
+    {
+        $this->log(__FUNCTION__, $message, $context);
+    }
 
     public function __call($method, $arguments)
     {
