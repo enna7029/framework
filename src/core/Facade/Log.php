@@ -15,6 +15,12 @@ use Enna\Framework\Facade;
  * @method static Channel|ChannelSet channel
  * @method static \Enna\Framework\Log record($msg, string $type = 'info', array $context = [], bool $lazy = true)
  * @method static mixed|void createDriver
+ * @method static write()
+ * @method static getLog()
+ * @method static clear()
+ * @method static close()
+ * @method static listen()
+ * @method static log()
  */
 class Log extends Facade
 {

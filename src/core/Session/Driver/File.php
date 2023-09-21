@@ -18,6 +18,8 @@ class File implements SessionHandlerInterface
         'expire' => 1440,
         'prefix' => '',
         'data_compress' => false,
+        'gc_probability' => 1,
+        'gc_divisor' => 100,
     ];
 
     public function __construct(App $app, array $config = [])
@@ -49,7 +51,7 @@ class File implements SessionHandlerInterface
 
         }
 
-        if (random_int(1, 100) <= 1) {
+        if (random_int(1, $this->config['gc_divisor']) <= $this->config['gc_probability']) {
             $this->clearFiles();
         }
     }
@@ -104,7 +106,7 @@ class File implements SessionHandlerInterface
      * @param string $file 文件
      * @return bool
      */
-    protected function unlink(string $file)
+    private function unlink(string $file)
     {
         return is_file($file) && unlink($file);
     }
@@ -113,8 +115,9 @@ class File implements SessionHandlerInterface
      * Note: 取得变量的存储文件名
      * Date: 2023-03-07
      * Time: 15:44
-     * @param string $name
-     * @param bool $auto
+     * @param string $name session文件名
+     * @param bool $auto 是否自动创建目录
+     * @return string
      */
     protected function getFileName(string $name, bool $auto = false)
     {
@@ -142,7 +145,7 @@ class File implements SessionHandlerInterface
      * Note: 读取文件内容(加锁)
      * Date: 2023-03-07
      * Time: 16:26
-     * @param string $path 文件
+     * @param string $path 文件(包含路径)
      * @return string
      */
     protected function readFile($path)
@@ -154,7 +157,7 @@ class File implements SessionHandlerInterface
                 if (flock($handle, LOCK_SH)) {
                     clearstatcache(true, $path);
 
-                    $content = fread($handle, filesize($path));
+                    $content = fread($handle, filesize($path) ?: 1);
 
                     flock($handle, LOCK_UN);
                 }

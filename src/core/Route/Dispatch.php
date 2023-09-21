@@ -197,6 +197,7 @@ abstract class Dispatch
      * Time: 14:59
      * @param array $option
      * @return void
+     * @throws \Enna\Framework\Exception\ ValidateException
      */
     protected function autoValidate(array $option)
     {
@@ -214,7 +215,10 @@ abstract class Dispatch
             }
         }
 
-        $v->message($message)->batch($batch)->failException(true)->check($this->request->param());
+        $v->message($message)
+            ->batch($batch)
+            ->failException(true)
+            ->check($this->request->param());
     }
 
     /**

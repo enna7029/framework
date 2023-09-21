@@ -110,14 +110,29 @@ class Channel
         return $this;
     }
 
-    public function write()
+    /**
+     * Note: 实时写入日志信息
+     * Date: 2023-08-29
+     * Time: 16:33
+     * @param mixed $msg 日志信息
+     * @param string $type 日志类型
+     * @param array $context 日志上下文
+     * @return $this
+     */
+    public function write($msg, string $type = 'info', array $context = [])
     {
-
+        return $this->record($msg, $type, $context, false);
     }
 
+    /**
+     * Note: 获取日志信息
+     * Date: 2023-08-29
+     * Time: 16:35
+     * @return array
+     */
     public function getLog()
     {
-        
+        return $this->log;
     }
 
     /**
@@ -130,7 +145,7 @@ class Channel
     {
         $log = $this->log;
         if ($this->event) {
-            $event = new LogWrite($name, $log);
+            $event = new LogWrite($this->name, $log);
             $this->event->trigger($event);
         }
 
@@ -160,7 +175,7 @@ class Channel
      */
     public function close()
     {
-        $this->close();
+        $this->clear();
 
         $this->close = true;
     }

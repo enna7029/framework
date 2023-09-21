@@ -6,7 +6,7 @@ namespace Enna\Framework;
 use ArrayAccess;
 
 /**
- * ENV管理类
+ * Env管理类
  * Class Env
  * @package Enna\Framework
  */

@@ -42,7 +42,7 @@ class Json extends Response
         try {
             $data = json_encode($data, $this->options['json_encode_param']);
 
-            if ($data) {
+            if ($data === false) {
                 throw new \InvalidArgumentException(json_last_error_msg());
             }
 

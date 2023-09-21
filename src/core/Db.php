@@ -5,6 +5,11 @@ namespace Enna\Framework;
 
 use Enna\Orm\DbManager;
 
+/**
+ * 数据库管理类
+ * Class Db
+ * @package Enna\Framework
+ */
 class Db extends DbManager
 {
     /**

@@ -5,6 +5,11 @@ namespace Enna\Framework;
 
 use \DateTimeInterface;
 
+/**
+ * Cookie管理类
+ * Class Cookie
+ * @package Enna\Framework
+ */
 class Cookie
 {
     /**
@@ -82,7 +87,7 @@ class Cookie
             $option = [];
         }
 
-        $option['expire'] = 111111111;
+        $option['expire'] = 315360000;
 
         $this->set($name, $value, $option);
     }
@@ -105,7 +110,7 @@ class Cookie
      * Time: 18:59
      * @param string $name cookie名称
      * @param string $value cookie值
-     * @param null $option 可选参数
+     * @param mixed $option 可选参数
      * @return void
      */
     public function set(string $name, string $value, $option = null)
@@ -173,12 +178,13 @@ class Cookie
                 $option['domain'],
                 $option['secure'] ? true : false,
                 $option['httponly'] ? true : false,
+                $option['samesite']
             );
         }
     }
 
     /**
-     * Note: 保存Cookie
+     * Note: 保存Cookie 
      * Date: 2022-10-08
      * Time: 18:31
      * @param string $name cookie名称
@@ -188,9 +194,10 @@ class Cookie
      * @param string $domain 有效域名
      * @param bool $secure 是否仅仅通过HTTPS
      * @param bool $httponly 仅通过httponly访问
+     * @param string $samesite 防止CSRF攻击和用户追踪
      * @return void
      */
-    protected function saveCookie(string $name, string $value, int $expire, string $path, string $domain, bool $secure, bool $httponly)
+    protected function saveCookie(string $name, string $value, int $expire, string $path, string $domain, bool $secure, bool $httponly, string $samesite)
     {
         if (version_compare(PHP_VERSION, '7.3.0', '>=')) {
             setcookie($name, $value, [
@@ -199,6 +206,7 @@ class Cookie
                 'domain' => $domain,
                 'secure' => $secure,
                 'httponly' => $httponly,
+                'samesite' => $samesite,
             ]);
         } else {
             setcookie($name, $value, $expire, $path, $domain, $secure, $httponly);

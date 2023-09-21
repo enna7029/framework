@@ -6,6 +6,11 @@ namespace Enna\Framework\File;
 use Enna\Framework\Exception\FileException;
 use Enna\Framework\File;
 
+/**
+ * 上传文件类
+ * Class UploadFile
+ * @package Enna\Framework\File
+ */
 class UploadFile extends File
 {
 
@@ -27,11 +32,18 @@ class UploadFile extends File
      */
     private $error;
 
+    /**
+     * 是否测试
+     * @var bool
+     */
+    private $test = false;
+
     public function __construct(string $path, string $originalName, string $mimeType, int $error = null, bool $test = false)
     {
         $this->originalName = $originalName;
         $this->mimeType = $mimeType;
-        $this->error = $error;
+        $this->error = $error ?: UPLOAD_ERR_OK;
+        $this->test = $test;
 
         parent::__construct($path, UPLOAD_ERR_OK === $this->error);
     }
@@ -46,19 +58,22 @@ class UploadFile extends File
     public function move(string $directory, string $name = null)
     {
         if ($this->isValid()) {
+            if ($this->test) {
+                return parent::move($directory, $name);
+            }
+
             $target = $this->getTargetFile($directory, $name);
 
             set_error_handler(function ($errno, $msg) use (&$error) {
                 $error = $msg;
             });
-
             $moved = move_uploaded_file($this->getPathname(), (string)$target);
             restore_error_handler();
             if (!$moved) {
-                throw new FileException('不能移动文件从' . $this->getPathname() . '到' . $target . '(' . $error . ')');
+                throw new FileException(sprintf('不能移动文件从"%s" 到 "%s" (%s)', $this->getPathname(), $target, strip_tags($error)));
             }
 
-            @chmod((string)$target, 0666);
+            @chmod((string)$target, 0666 & ~umask());
 
             return $target;
         }
@@ -77,7 +92,7 @@ class UploadFile extends File
     {
         $isOk = UPLOAD_ERR_OK === $this->error;
 
-        return $isOk && is_uploaded_file($this->getPathname());
+        return $this->test ? $isOk : $isOk && is_uploaded_file($this->getPathname());
     }
 
     /**

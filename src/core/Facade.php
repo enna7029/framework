@@ -2,6 +2,11 @@
 
 namespace Enna\Framework;
 
+/**
+ * Facade管理类
+ * Class Facade
+ * @package Enna\Framework
+ */
 class Facade
 {
     /**

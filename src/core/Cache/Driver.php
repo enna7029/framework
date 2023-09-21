@@ -12,6 +12,11 @@ use Exception;
 use Throwable;
 use Closure;
 
+/**
+ * 缓存基础类
+ * Class Driver
+ * @package Enna\Framework\Cache
+ */
 abstract class Driver implements CacheInterface, CacheHandlerInterface
 {
     /**
@@ -56,7 +61,9 @@ abstract class Driver implements CacheInterface, CacheHandlerInterface
         if ($expire instanceof \DateTimeInterface) {
             $expire = $expire->getTimestamp() - time();
         } elseif ($expire instanceof \DateInterval) {
-            $expire = \DateTime::createFromFormat('U', (string)time())->add($expire)->format('U')->time();
+            $expire = \DateTime::createFromFormat('U', (string)time())
+                    ->add($expire)
+                    ->format('U') - time();
         }
 
         return (int)$expire;
@@ -251,7 +258,7 @@ abstract class Driver implements CacheInterface, CacheHandlerInterface
         }
 
         $time = time();
-        if ($time + 5 > time() && $this->has($name . '_locl')) {
+        if ($time + 5 > time() && $this->has($name . '_lock')) {
             usleep(200000);
         }
 

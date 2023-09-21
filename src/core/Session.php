@@ -6,6 +6,7 @@ namespace Enna\Framework;
 use Enna\Framework\Session\Store;
 
 /**
+ * Session管理类
  * Class Session
  * @package Enna\Framework
  * @mixin Store

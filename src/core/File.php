@@ -7,6 +7,11 @@ use \Closure;
 use SplFileInfo;
 use Enna\Framework\Exception\FileException;
 
+/**
+ * 上传文件基础类
+ * Class File
+ * @package Enna\Framework
+ */
 class File extends SplFileInfo
 {
     /**

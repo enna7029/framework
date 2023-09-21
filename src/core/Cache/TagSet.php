@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 namespace Enna\Framework\Cache;
 
+/**
+ * 标签集合类
+ * Class TagSet
+ * @package Enna\Framework\Cache
+ */
 class TagSet
 {
     /**
@@ -37,6 +42,8 @@ class TagSet
         $this->handler->set($name, $value, $expire);
 
         $this->append($name);
+
+        return true;
     }
 
     /**
@@ -52,6 +59,8 @@ class TagSet
         $this->handler->remember($name, $value, $expire);
 
         $this->append($name);
+
+        return true;
     }
 
     /**

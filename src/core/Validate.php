@@ -4,10 +4,14 @@ declare(strict_types=1);
 namespace Enna\Framework;
 
 use Closure;
-use Enna\Framework\Request;
-use Enna\Framework\Lang;
+use Enna\Framework\Validate\ValidateRule;
 use Enna\Framework\Exception\ValidateException;
 
+/**
+ * 数据验证类
+ * Class Validate
+ * @package Enna\Framework
+ */
 class Validate
 {
     /**
@@ -15,6 +19,19 @@ class Validate
      * @var array
      */
     protected $type = [];
+
+    /**
+     * 验证类型别名
+     * @var string[]
+     */
+    protected $alias = [
+        '>' => 'gt',
+        '>=' => 'egt',
+        '<' => 'lt',
+        '<=' => 'elt',
+        '=' => 'eq',
+        'same' => 'eq',
+    ];
 
     /**
      * 验证场景定义
@@ -179,7 +196,8 @@ class Validate
     ];
 
     /**
-     * @var Closure
+     * 记录扩展验证规则
+     * @var array
      */
     protected static $maker = [];
 
@@ -193,7 +211,7 @@ class Validate
     }
 
     /**
-     * Note: 设置服务注入
+     * Note: 扩展验证规则
      * Date: 2023-01-17
      * Time: 10:19
      * @param Closure $maker
@@ -220,7 +238,7 @@ class Validate
      * Note: 设置Db对象
      * Date: 2023-01-17
      * Time: 10:24
-     * @param Db $db
+     * @param \Enna\Framework\Db $db
      * @return void
      */
     public function setDb(Db $db)
@@ -455,6 +473,8 @@ class Validate
             //当设置场景时:过滤不需要验证的字段
             if (!empty($this->only) && !in_array($key, $this->only)) {
                 continue;
+
+
             }
 
             //获取数据
@@ -463,6 +483,8 @@ class Validate
             //字段验证
             if ($rule instanceof Closure) { //闭包
                 $result = call_user_func_array($rule, [$value, $data]);
+            } elseif ($rule instanceof ValidateRule) {
+                $result = $this->checkItem($key, $value, $rule->getRule(), $data, $rule->getTitle() ?: $title, $rule->getMsg());
             } else {
                 $result = $this->checkItem($key, $value, $rule, $data, $title);
             }
@@ -519,6 +541,47 @@ class Validate
     }
 
     /**
+     * Note: 根据验证规则验证数据
+     * Date: 2023-09-18
+     * Time: 17:59
+     * @param mixed $value 字段值
+     * @param mixed $rule 验证规则
+     * @return bool
+     */
+    public function checkRule($value, $rules)
+    {
+        if ($rules instanceof Closure) {
+            return call_user_func_array($rules, [$value]);
+        } elseif ($rules instanceof ValidateRule) {
+            $rules = $rules->getRule();
+        } else {
+            $rules = explode('|', $rules);
+        }
+
+        foreach ($rules as $key => $rule) {
+            if ($rules instanceof Closure) {
+                $result = call_user_func_array($rule, [$value]);
+            } else {
+                [$type, $rule] = $this->getValidateType($key, $rule);
+
+                $callback = $this->type[$type] ?? [$this, $type];
+
+                $result = call_user_func_array($callback, [$value, $rule]);
+            }
+
+            if ($result !== true) {
+                if ($this->failException) {
+                    throw new ValidateException($result);
+                }
+
+                return $result;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Note: 验证单个字段规则
      * Date: 2023-01-17
      * Time: 16:47
@@ -552,18 +615,20 @@ class Validate
             return true;
         }
 
+        $i = 0;
         foreach ($rules as $key => $rule) {
             if ($rule instanceof Closure) {
                 $result = call_user_func_array($rule, [$value, $data]);
                 $info = is_numeric($key) ? '' : $key;
             } else {
-                //获取验证类型,验证值,验证原始类型
+                //真实类型,规则,原始类型
                 [$type, $rule, $info] = $this->getValidateType($key, $rule);
 
                 //对添加和移除的进行处理
                 if (isset($this->append[$field]) && $this->append[$field] === $info) {
 
                 } elseif (isset($this->remove[$field]) && in_array($info, $this->remove[$field])) {
+                    $i++;
                     continue;
                 }
 
@@ -577,7 +642,14 @@ class Validate
             }
 
             if ($result === false) {
-                $message = $this->getRuleMsg($field, $title, $info, $rule);
+                if (!empty($msg[$i])) {
+                    $message = $msg[$i];
+                    if (is_string($message) && strpos($message, '{%') === 0) {
+                        $message = $this->lang->get(substr($message, 2, -1));
+                    }
+                } else {
+                    $message = $this->getRuleMsg($field, $title, $info, $rule);
+                }
 
                 return $message;
             } elseif ($result !== true) {
@@ -590,6 +662,7 @@ class Validate
                 }
                 return $message;
             }
+            $i++;
         }
 
         return $result ?? true;
@@ -630,10 +703,14 @@ class Validate
      * @param mixed $rule 规则
      * @return string|array
      */
-    protected function getRuleMsg(string $attibute, string $title, string $type, $rule)
+    protected function getRuleMsg(string $attribute, string $title, string $type, $rule)
     {
-        if (isset($this->message[$attibute . '.' . $type])) { //例如:name.require='name不能为空'
-            $msg = $this->message[$attibute . '.' . $type];
+        if (isset($this->message[$attribute . '.' . $type])) { //例如:name.require='name不能为空'
+            $msg = $this->message[$attribute . '.' . $type];
+        } elseif (isset($this->message[$attribute][$type])) {
+            $msg = $this->message[$attribute][$type];
+        } elseif (isset($this->message[$attribute])) {
+            $msg = $this->message[$attribute];
         } elseif (isset($this->typeMsg[$type])) { //自定义扩展的错误提示
             $msg = $this->typeMsg[$type];
         } else {
@@ -1216,6 +1293,126 @@ class Validate
      */
     public function unique($value, $rule, array $data = [], string $field = '')
     {
+        if (is_string($rule)) {
+            $rule = explode(',', $rule);
+        }
+
+        if (strpos($rule[0], '\\')) {
+            $db = new $rule[0];
+        } else {
+            $db = $this->db->name($rule[0]);
+        }
+
+        $key = $rule[1] ?? $field;
+        $map = [];
+
+        if (strpos($key, '^')) {
+            $fields = explode('^', $key);
+            foreach ($fields as $key) {
+                if (isset($data[$key])) {
+                    $map[] = [$key, '=', $data[$key]];
+                }
+            }
+        } elseif (isset($data[$field])) {
+            $map = [$key, '=', $data[$field]];
+        } else {
+            $map = [];
+        }
+
+        $pk = !empty($rule[3]) ? $rule[3] : $db->getPk();
+
+        if (is_string($pk)) {
+            if (isset($rule[2])) {
+                $map[] = [$pk, '<>', $rule[2]];
+            } elseif (isset($data[$pk])) {
+                $map[] = [$pk, '<>', $data[$pk]];
+            }
+        }
+
+        if ($db->where($map)->field($pk)->find()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Note: 验证某个字段等于某个值的时候必须
+     * Date: 2023-09-19
+     * Time: 16:02
+     * @param mixed $value 字段值
+     * @param mixed $rule 验证规则
+     * @param array $data 数据
+     * @return bool
+     */
+    public function requireIf($value, $rule, array $data = [])
+    {
+        [$field, $val] = explode(',', $rule);
+
+        if ($this->getDataValue($data, $field) == $val) {
+            return !empty($value) || $value == '0';
+        }
+
+        return true;
+    }
+
+    /**
+     * Note: 通过回调方法验证某个字段是否必须
+     * Date: 2023-09-19
+     * Time: 16:20
+     * @param mixed $value 字段值
+     * @param mixed $rule 验证规则
+     * @param array $data 数据
+     * @return bool
+     */
+    public function requireCallback($value, $rule, array $data = [])
+    {
+        $result = call_user_func_array([$this, $rule], [$value, $data]);
+
+        if ($result) {
+            return !empty($value) || $value == '0';
+        }
+
+        return true;
+    }
+
+    /**
+     * Note: 验证某个字段有值的情况下必须
+     * Date: 2023-09-19
+     * Time: 16:28
+     * @param mixed $value 字段值
+     * @param mixed $rule 验证规则
+     * @param array $data 数据
+     * @return bool
+     */
+    public function requireWith($value, $rule, array $data = [])
+    {
+        $val = $this->getDataValue($data, $rule);
+
+        if (!empty($val)) {
+            return !empty($value) || $value == '0';
+        }
+
+        return true;
+    }
+
+    /**
+     * Note: 验证某个字段没有值的情况下必须
+     * Date: 2023-09-19
+     * Time: 16:28
+     * @param mixed $value 字段值
+     * @param mixed $rule 验证规则
+     * @param array $data 数据
+     * @return bool
+     */
+    public function requireWithout($value, $rule, array $data = [])
+    {
+        $val = $this->getDataValue($data, $rule);
+
+        if (empty($val)) {
+            return !empty($value) || $value == '0';
+        }
+
         return true;
     }
 

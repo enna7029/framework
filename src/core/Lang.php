@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 namespace Enna\Framework;
 
+/**
+ * 多语言管理类
+ * Class Lang
+ * @package Enna\Framework
+ */
 class Lang
 {
     protected $app;
@@ -168,8 +173,8 @@ class Lang
 
             return isset($this->lang[$range][strtolower($name1)][$name2]);
         }
-
-        return $this->lang[$range][strtolower($name)];
+        
+        return isset($this->lang[$range][strtolower($name)]);
     }
 
     /**

@@ -755,10 +755,10 @@ class Request implements ArrayAccess
     {
         $array = [];
         foreach ($files as $key => $file) {
-            if (is_array($file)) {
+            if (is_array($file['name'])) {
                 $item = [];
 
-                $keys = array_keys($file);
+                $keys  = array_keys($file);
                 $count = count($file['name']);
                 for ($i = 0; $i < $count; $i++) {
                     if ($file['error'][$i] > 0) {
@@ -768,6 +768,8 @@ class Request implements ArrayAccess
                             continue;
                         }
                     }
+
+                    $temp['key'] = $key;
 
                     foreach ($keys as $temp_key) {
                         $temp[$temp_key] = $file[$temp_key][$i];
@@ -788,8 +790,8 @@ class Request implements ArrayAccess
                             continue;
                         }
                     }
-
-                    $array[$key] = new UploadFile($file['tmp_name'], $temp['name'], $temp['type'], $temp['error']);
+                    
+                    $array[$key] = new UploadFile($file['tmp_name'], $file['name'], $file['type'], $file['error']);
                 }
             }
         }

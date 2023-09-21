@@ -12,6 +12,8 @@ use Enna\Framework\Facade\Session;
 use Enna\Framework\Response;
 use Enna\Framework\Exception\HttpResponseException;
 use Enna\Framework\Exception\HttpException;
+use Enna\Framework\Facade\Cache;
+use Enna\Framework\Facade\Lang;
 
 if (!function_exists('app')) {
     /**
@@ -118,9 +120,9 @@ if (!function_exists('validate')) {
      * Note: 生成验证对象
      * Date: 2023-02-10
      * Time: 15:21
-     * @param string $validate 验证器
+     * @param string $validate 验证器类名或者验证规则数组
      * @param array $message 验证提示信息
-     * @param bool $batch 是否批量
+     * @param bool $batch 是否批量验证
      * @param bool $failException 是否抛出异常
      * @return Validate
      */
@@ -489,6 +491,59 @@ if (!function_exists('trace')) {
         }
 
         Log::record($log, $level);
+    }
+}
+
+if (!function_exists('cache')) {
+    /**
+     * Note: 缓存管理
+     * Date: 2023-09-06
+     * Time: 18:25
+     * @param string $name 缓存名称
+     * @param mixed $value 缓存值
+     * @param mixed $options 缓存参数
+     * @param mixed $tag 缓存标签
+     * @return mixed
+     */
+    function cache(string $name = null, $value = '', $options = null, $tag = null)
+    {
+        if (is_null($name)) {
+            return app('cache');
+        }
+
+        if ($value === '') {
+            return strpos($name, '?') === 0 ? Cache::has(substr($name, 1)) : Cache::get($name);
+        } elseif (is_null($value)) {
+            return Cache::delete($name);
+        }
+
+        if (is_array($options)) {
+            $expires = $options['expires'] ?? null;
+        } else {
+            $expires = $options;
+        }
+
+        if (is_null($tag)) {
+            return Cache::set($name, $value, $expires);
+        } else {
+            return Cache::tag($tag)->set($name, $value, $expires);
+        }
+    }
+}
+
+if (!function_exists('lang')) {
+    /**
+     * Note: 获取语言变量值
+     * Date: 2023-09-19
+     * Time: 19:06
+     * @param string $name 语言变量名
+     * @param array $vars 动态变量值
+     * @param string $lang 语言
+     * @return mixed
+     */
+    function lang(string $name, array $vars = [], string $lang = '')
+    {
+        return Lang::get($name, $vars, $lang);
     }
 }
 

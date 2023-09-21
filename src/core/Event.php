@@ -8,6 +8,11 @@ use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
 
+/**
+ * 事件管理类
+ * Class Event
+ * @package Enna\Framework
+ */
 class Event
 {
     /**

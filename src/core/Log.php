@@ -10,6 +10,11 @@ use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Enna\Framework\Helper\Arr;
 
+/**
+ * 日志管理类
+ * Class Log
+ * @package Enna\Framework
+ */
 class Log extends Manager implements LoggerInterface
 {
     const EMERGENCY = 'emergency';
@@ -123,9 +128,9 @@ class Log extends Manager implements LoggerInterface
     {
         $driver = parent::createDriver($name); //获取驱动对象实例
 
-        $lazy = !$this->getChannelConfig($name, 'realtime_write', false) && !$this->app->runningInConsole();
-        
-        $allow = array_merge($this->getConfig('level', []), $this->getChannelConfig($name, 'level', []));
+        $lazy = !$this->getChannelConfig($name, 'realtime_write', false) && !$this->app->runningInConsole(); //是否延迟写入日志
+
+        $allow = array_merge($this->getConfig('level', []), $this->getChannelConfig($name, 'level', []));//是否允许的日志级别
 
         return new Channel($name, $driver, $allow, $lazy, $this->app->event);
     }
@@ -134,7 +139,7 @@ class Log extends Manager implements LoggerInterface
      * Note: 清空日志信息
      * Date: 2023-08-26
      * Time: 15:42
-     * @param string $channel 日志通道
+     * @param string|array $channel 日志通道
      * @return $this
      */
     public function clear($channel = '*')
@@ -152,9 +157,10 @@ class Log extends Manager implements LoggerInterface
      * Note: 关闭本次请求日志写入
      * Date: 2023-08-26
      * Time: 15:44
+     * @param string|array $channel 日志通道
      * @return $this
      */
-    public function close()
+    public function close($channel = '*')
     {
         if ($channel == '*') {
             $channel = array_keys($this->drivers);
@@ -214,7 +220,7 @@ class Log extends Manager implements LoggerInterface
      * @param mixed $msg 信息
      * @param string $type 级别
      * @param array $context 内容
-     * @param bool $lazy 是否实时写入
+     * @param bool $lazy 是否延迟写入
      * @return $this
      */
     public function record($msg, string $type = 'info', array $context = [], bool $lazy = true)

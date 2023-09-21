@@ -46,9 +46,7 @@ class Store
     public function __construct($name, SessionHandlerInterface $handler, array $serialize = null)
     {
         $this->name = $name;
-
         $this->handler = $handler;
-
         if (!is_null($serialize)) {
             $this->serialize = $serialize;
         }
@@ -135,11 +133,11 @@ class Store
      * Note: session设置
      * Date: 2023-03-01
      * Time: 18:52
-     * @param string|null $name session名称
+     * @param string $name session名称
      * @param mixed $value 值
      * @return void
      */
-    public function set(string $name = null, $value = null)
+    public function set(string $name, $value = null)
     {
         Arr::set($this->data, $name, $value);
     }

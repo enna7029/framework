@@ -224,4 +224,31 @@ class Redis extends Driver
             $this->handler->del($key);
         }
     }
+
+    /**
+     * Note: 追加TagSet数据
+     * Date: 2023-09-07
+     * Time: 16:51
+     * @param string $name 标签
+     * @param string $value 缓存标识
+     */
+    public function append(string $name, $value)
+    {
+        $key = $this->getCacheKey($name);
+        $this->handler->sAdd($key, $value);
+    }
+
+    /**
+     * Note: 获取标签包含的缓存标识
+     * Date: 2023-09-07
+     * Time: 16:55
+     * @param string $tag 标签
+     * @return array|string[]
+     */
+    public function getTagItems(string $tag)
+    {
+        $name = $this->getTagItems($tag);
+        $key = $this->getCacheKey($name);
+        return $this->handler->sMembers($key);
+    }
 }

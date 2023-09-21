@@ -6,6 +6,11 @@ namespace Enna\Framework;
 use Closure;
 use Enna\Framework\Console\Command;
 
+/**
+ * 控制台应用管理类
+ * Class Console
+ * @package Enna\Framework
+ */
 class Console
 {
     /**

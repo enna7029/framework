@@ -8,12 +8,12 @@ use Enna\Framework\Contract\LogHandlerInterface;
 class File implements LogHandlerInterface
 {
     /**
-     * 配置参数
+     * 通道配置参数
      * @var array
      */
     protected $config = [
         //日期格式
-        'time_format' => 'Y-m-d H:i:s',
+        'time_format' => 'c',
         //单日志文件
         'single' => false,
         //文件大小
@@ -36,6 +36,10 @@ class File implements LogHandlerInterface
     {
         if (is_array($config)) {
             $this->config = array_merge($this->config, $config);
+        }
+
+        if (empty($this->config['format'])) {
+            $this->config['format'] = '[%s][%s] %s';
         }
 
         if (empty($this->config['path'])) {
@@ -61,10 +65,11 @@ class File implements LogHandlerInterface
         $path = dirname($destination);
         !is_dir($path) && mkdir($path, 0755, true);
 
-        $time = date('Y-m-d H:i:s');
+        //$time = date('Y-m-d H:i:s');
+        //$time = \DateTime::createFromFormat('0.u00 U', microtime())->setTimezone(new \DateTimeZone(date_default_timezone_get()))->format($this->config['time_format']);
+        $time = (new \DateTime())->setTimezone(new \DateTimeZone(date_default_timezone_get()))->format('c');
 
         $info = [];
-
         foreach ($log as $type => $val) {
             $message = [];
             foreach ($val as $msg) {
@@ -104,7 +109,6 @@ class File implements LogHandlerInterface
         $this->checkLogSize($destination);
 
         $info = [];
-
         foreach ($message as $type => $msg) {
             $info[$type] = is_array($msg) ? implode(PHP_EOL, $msg) : $msg;
         }
@@ -115,13 +119,14 @@ class File implements LogHandlerInterface
     }
 
     /**
-     * Note: 获取主日志文件名
+     * Note: 获取主日志文件:路径+文件名
      * Date: 2022-12-09
      * Time: 10:28
      * @return string
      */
     public function getMasterLogFile()
     {
+        //设置max_files后,日志文件不会分日期子目录存放
         if ($this->config['max_files']) {
             $files = glob($this->config['path'] . '*.log');
 
@@ -134,6 +139,7 @@ class File implements LogHandlerInterface
             }
         }
 
+        //是否单文件日志
         if ($this->config['single']) {
             $name = is_string($this->config['single']) ? $this->config['single'] : 'sigle';
             $destination = $this->config['path'] . $name . '.log';
@@ -182,7 +188,7 @@ class File implements LogHandlerInterface
     {
         if (is_file($destination) && floor($this->config['file_size']) <= filesize($destination)) {
             try {
-                rename($destination, dir($destination) . DIRECTORY_SEPARATOR . time() . basename($destination));
+                rename($destination, dirname($destination) . DIRECTORY_SEPARATOR . time() . '-' . basename($destination));
             } catch (\Exception $e) {
 
             }

@@ -7,6 +7,7 @@ use Enna\Framework\Cache\TagSet;
 use Psr\SimpleCache\CacheInterface;
 use Enna\Framework\Cache\Driver;
 use InvalidArgumentException;
+use Enna\Framework\Helper\Arr;
 
 /**
  * 缓存管理
@@ -56,23 +57,11 @@ class Cache extends Manager implements CacheInterface
      */
     public function getStoreConfig(string $store, string $name = null, $default = null)
     {
-        $config = $this->getConfig('stores.' . $store);
-
-        if ($config) {
-            if (!is_null($name)) {
-                foreach ($config as $key => $item) {
-                    if ($name == $key && !empty($item)) {
-                        return $item;
-                    } else {
-                        return $default;
-                    }
-                }
-            } else {
-                return $config;
-            }
+        if ($config = $this->getConfig("stores.{$store}")) {
+            return Arr::get($config, $name, $default);
         }
 
-        throw new InvalidArgumentException('驱动【' . $store . '】未找到');
+        throw new \InvalidArgumentException("Store [$store] not found.");
     }
 
     /**
@@ -103,7 +92,7 @@ class Cache extends Manager implements CacheInterface
      * Note: 连接缓存驱动
      * Date: 2022-12-21
      * Time: 17:53
-     * @param string|null $name
+     * @param string $name 连接驱动名
      * @return Driver
      */
     public function store(string $name = null)
