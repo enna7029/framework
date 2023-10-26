@@ -13,10 +13,10 @@ use Enna\Orm\DbManager;
 class Db extends DbManager
 {
     /**
-     * Note:
+     * Note: 实例化数据库控制器类
      * Date: 2023-03-23
      * Time: 11:02
-     * @param Event $event 
+     * @param Event $event
      * @param Config $config
      * @param Log $log
      * @param Cache $cache
@@ -25,14 +25,45 @@ class Db extends DbManager
     public static function __make(Event $event, Config $config, Log $log, Cache $cache)
     {
         $db = new static();
-        $db->setEvent($event);
         $db->setConfig($config);
+        $db->setEvent($event);
         $db->setLog($log);
 
         $store = $db->getConfig('cache_store');
         $db->setCache($cache->store($store));
 
+        $db->triggerSql();
+
         return $db;
+    }
+
+    /**
+     * Note: 设置配置对象
+     * Date: 2023-03-22
+     * Time: 18:10
+     * @param Config $config 配置对象
+     * @return void
+     */
+    public function setConfig($config)
+    {
+        $this->config = $config;
+    }
+
+    /**
+     * Note: 获取配置参数值
+     * Date: 2023-03-22
+     * Time: 18:11
+     * @param string|null $name 默认参数
+     * @param mixed $default 默认值
+     * @return array|mixed|void
+     */
+    public function getConfig(string $name = null, $default = null)
+    {
+        if (empty($name)) {
+            return $this->config->get('database', []);
+        }
+
+        return $this->config->get('database.' . $name, $default);
     }
 
     /**
@@ -74,37 +105,8 @@ class Db extends DbManager
     public function trigger(string $event, $params = null, bool $once = false)
     {
         if ($this->event) {
-            $this->event->trigger($event, $params, $once);
+            $this->event->trigger('db.' . $event, $params, $once);
         }
-    }
-
-    /**
-     * Note: 设置配置对象
-     * Date: 2023-03-22
-     * Time: 18:10
-     * @param Config $config 配置对象
-     * @return void
-     */
-    public function setConfig($config)
-    {
-        $this->config = $config;
-    }
-
-    /**
-     * Note: 获取配置参数值
-     * Date: 2023-03-22
-     * Time: 18:11
-     * @param string|null $name 默认参数
-     * @param mixed $default 默认值
-     * @return array|mixed|void
-     */
-    public function getConfig(string $name = null, $default = null)
-    {
-        if (empty($name)) {
-            return $this->config->get('database', []);
-        }
-
-        return $this->config->get('database.' . $name, $default);
     }
 
 }

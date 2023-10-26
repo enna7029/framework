@@ -138,7 +138,7 @@ class App extends Container
         'cookie' => Cookie::class,
         'session' => Session::class,
         'db' => Db::class,
-        'Enna\Orn\DbManager' => Db::class,
+        'Enna\Orm\DbManager' => Db::class,
     ];
 
     /**
