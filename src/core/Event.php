@@ -64,11 +64,11 @@ class Event
      * Date: 2022-09-17
      * Time: 14:38
      * @param string $event 事件名
-     * @param array $listener 监听操作(或类名)
+     * @param mixed $listener 监听操作(或类名)
      * @param bool $first 是否优先执行
      * @return $this
      */
-    public function listen(string $event, array $listener, bool $first = false)
+    public function listen(string $event, $listener, bool $first = false)
     {
         if (isset($this->bind[$event])) {
             $event = $this->bind[$event];
@@ -235,7 +235,7 @@ class Event
         $listeners = array_unique($listeners, SORT_REGULAR);
 
         foreach ($listeners as $key => $listener) {
-            $result[$key] = $this->dispatch($listeners, $params);
+            $result[$key] = $this->dispatch($listener, $params);
 
             if ($result[$key] === false || (!is_null($result[$key]) && $once)) {
                 break;
@@ -253,10 +253,16 @@ class Event
      * @param mixed $params 参数
      * @return mixed
      */
-    protected function dispatch(string $event, $params = null)
+    protected function dispatch($event, $params = null)
     {
-        $obj = $this->app->make($event);
-        $call = [$obj, 'handle'];
+        if (!is_string($event)) {
+            $call = $event;
+        } elseif (strpos($event, '::')) {
+            $call = $event;
+        } else {
+            $obj = $this->app->make($event);
+            $call = [$obj, 'handle'];
+        }
 
         return $this->app->invoke($call, [$params]);
     }

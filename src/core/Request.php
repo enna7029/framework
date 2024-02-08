@@ -302,10 +302,10 @@ class Request implements ArrayAccess
                     $header[$key] = $val;
                 }
             }
-            if ($server['CONTENT_TYPE']) {
+            if (isset($server['CONTENT_TYPE'])) {
                 $header['content-type'] = $server['CONTENT_TYPE'];
             }
-            if ($server['CONTENT_LENGTH']) {
+            if (isset($server['CONTENT_LENGTH'])) {
                 $header['content-length'] = $server['CONTENT_LENGTH'];
             }
         }

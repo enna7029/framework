@@ -69,6 +69,32 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
     }
 
     /**
+     * Note: 按指定的键整理数据
+     * Date: 2023-04-13
+     * Time: 15:35
+     * @param mixed $items 数据
+     * @param string $indexKey 键名
+     * @return array
+     */
+    public function dictionary($items = null, string &$indexKey = null)
+    {
+        if ($items instanceof self) {
+            $items = $items->all();
+        }
+        $items = is_null($items) ? $this->items : $items;
+
+        if ($items && empty($indexKey)) {
+            $indexKey = is_array($items[0]) ? 'id' : $items[0]->getPk();
+        }
+
+        if (isset($indexKey) && is_string($indexKey)) {
+            return array_column($items, null, $indexKey);
+        }
+
+        return $items;
+    }
+
+    /**
      * Note: 比较数组,返回差集
      * Date: 2023-04-13
      * Time: 11:33
@@ -158,6 +184,17 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
     }
 
     /**
+     * Note: 删除数组中的最后一个元素
+     * Date: 2023-04-13
+     * Time: 16:25
+     * @return mixed
+     */
+    public function pop()
+    {
+        return array_pop($this->items);
+    }
+
+    /**
      * Note: 通过使用用户自定义函数，以字符串返回数组
      * Date: 2023-04-13
      * Time: 16:27
@@ -228,17 +265,6 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
         }
 
         return $this;
-    }
-
-    /**
-     * Note: 删除数组中的最后一个元素
-     * Date: 2023-04-13
-     * Time: 16:25
-     * @return mixed
-     */
-    public function pop()
-    {
-        return array_pop($this->items);
     }
 
     /**
@@ -555,32 +581,6 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
     public function whereNotBetween(string $field, $value)
     {
         return $this->where($field, 'not between', $value);
-    }
-
-    /**
-     * Note: 按指定的键整理数据
-     * Date: 2023-04-13
-     * Time: 15:35
-     * @param mixed $items 数据
-     * @param string $indexKey 键名
-     * @return array
-     */
-    public function dictionary($items = null, string &$indexKey = null)
-    {
-        if ($items instanceof self) {
-            $items = $items->all();
-        }
-        $items = is_null($items) ? $this->items : $items;
-
-        if ($items && empty($indexKey)) {
-            $indexKey = is_array($items[0]) ? 'id' : $items[0]->getPk();
-        }
-
-        if (isset($indexKey) && is_string($indexKey)) {
-            return array_column($items, null, $indexKey);
-        }
-
-        return $items;
     }
 
     /**

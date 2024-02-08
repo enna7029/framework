@@ -1,0 +1,14 @@
+<?php
+declare (strict_types = 1);
+
+namespace {%namespace%};
+
+use Enna\Orm\Model;
+
+/**
+ * @mixin \Enna\Orm\Model
+ */
+class {%className%} extends Model
+{
+    //
+}

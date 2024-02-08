@@ -172,6 +172,7 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
      * Time: 17:52
      * @param mixed $callable 类和方法
      * @param array $vars 参数
+     * @return mixed
      */
     public function invoke($callable, array $vars = [])
     {

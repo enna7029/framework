@@ -1,0 +1,26 @@
+<?php
+declare (strict_types = 1);
+
+namespace {%namespace%};
+
+use Enna\Framework\Console\Command;
+use Enna\Framework\Console\Input;
+use Enna\Framework\Console\Input\Argument;
+use Enna\Framework\Console\Input\Option;
+use Enna\Framework\Console\Output;
+
+class {%className%} extends Command
+{
+    protected function configure()
+    {
+        // 指令配置
+        $this->setName('{%commandName%}')
+            ->setDescription('the {%commandName%} command');
+    }
+
+    protected function execute(Input $input, Output $output)
+    {
+        // 指令输出
+        $output->writeln('{%commandName%}');
+    }
+}

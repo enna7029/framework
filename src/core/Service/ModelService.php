@@ -21,8 +21,8 @@ class ModelService extends Service
         Model::maker(function (Model $model) {
             $config = $this->app->config;
 
-            $isAutoWriteTimestamp = $model->getAutoWriteTimestamp();
-            if (is_null($isAutoWriteTimestamp)) {
+            $autoWriteTimestamp = $model->getAutoWriteTimestamp();
+            if (is_null($autoWriteTimestamp)) {
                 $model->isAutoWriteTimestamp($config->get('database.auto_timestamp'), 'timestamp');
             }
 
@@ -31,9 +31,9 @@ class ModelService extends Service
                 $model->setDateFormat($config->get('database.datetime_format'), 'Y-m-d H:i:s');
             }
 
-            $datetimeField = $config->get('database.datetime_field');
-            if (!empty($dateFormat)) {
-                [$createTime, $updateTime] = explode(',', $dateFormat);
+            $timeField = $config->get('database.datetime_field');
+            if (!empty($timeField)) {
+                [$createTime, $updateTime] = explode(',', $timeField);
                 $model->setTimeField($createTime, $updateTime);
             }
         });

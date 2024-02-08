@@ -6,6 +6,7 @@ use Enna\Framework\Facade\Log;
 use Enna\Framework\Request;
 use Enna\Framework\Validate;
 use Enna\Framework\Facade\Event;
+use Enna\Framework\Facade\Env;
 use Enna\Framework\Route\Url;
 use Enna\Framework\Facade\Route;
 use Enna\Framework\Facade\Session;
@@ -128,10 +129,23 @@ if (!function_exists('validate')) {
      */
     function validate($validate = '', array $message = [], bool $batch = false, bool $failException = true)
     {
-        if ($validate === '') {
+        if (is_array($validate) || $validate === '') {
             $class = new Validate();
+            if (is_array($validate)) {
+                $class->rule($validate);
+            }
         } else {
-            $class = new $validate();
+            if (strpos($validate, '.')) {
+                [$validate, $scene] = explode('.', $validate);
+            }
+
+            $className = strpos($validate, '\\') !== false ? $validate : app()->parseClass('validate', $validate);
+
+            $class = new $className();
+
+            if (!empty($scene)) {
+                $class->scene($scene);
+            }
         }
 
         return $class->message($message)->batch($batch)->failException($failException);
@@ -223,6 +237,20 @@ if (!function_exists('bind')) {
     function bind($abstract, $concrete = null)
     {
         return Container::getInstance()->bind($abstract, $concrete);
+    }
+}
+
+if (!function_exists('env')) {
+    /**
+     * 获取环境变量值
+     * @access public
+     * @param string $name 环境变量名（支持二级 .号分割）
+     * @param string $default 默认值
+     * @return mixed
+     */
+    function env(string $name = null, $default = null)
+    {
+        return Env::get($name, $default);
     }
 }
 
@@ -410,6 +438,40 @@ if (!function_exists('jsonp')) {
     function jsonp($data = [], $code = 200, $header = [], $options = [])
     {
         return Response::create($data, 'jsonp', $code)->header($header)->options($options);
+    }
+}
+
+if (!function_exists('view')) {
+    /**
+     * Note: 渲染模板输出
+     * Date: 2023-11-29
+     * Time: 17:15
+     * @param string $template 模板文件
+     * @param array $vars 模板变量
+     * @param int $code 状态码
+     * @param callable $filter 内容过滤
+     * @return Enna\Framework\Response\View
+     */
+    function view(string $template = '', $vars = [], $code = 200, $filter = null)
+    {
+        return Response::create($template, 'view', $code)->assign($vars)->filter($filter);
+    }
+}
+
+if (!function_exists('display')) {
+    /**
+     * Note: 渲染内容输出
+     * Date: 2023-11-29
+     * Time: 17:17
+     * @param string $content 渲染内容
+     * @param array $vars 模板变量
+     * @param int $code 状态码
+     * @param callable $filter 内容过滤
+     * @return Enna\Framework\Response\View
+     */
+    function display(string $content = '', $vars = [], $code = 200, $filter = null)
+    {
+        return Response::create($content, 'view', $code)->isContent(true)->assign($vars)->filter($filter);
     }
 }
 

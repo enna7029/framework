@@ -22,6 +22,7 @@ class Cookie
         'domain' => '', //有效域名
         'secure' => false, //启用安全传输
         'httponly' => false, //httpOnly设置
+        'samesite' => '', //支持 'strict' 'lax'
     ];
 
     /**
@@ -184,7 +185,7 @@ class Cookie
     }
 
     /**
-     * Note: 保存Cookie 
+     * Note: 保存Cookie
      * Date: 2022-10-08
      * Time: 18:31
      * @param string $name cookie名称

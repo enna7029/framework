@@ -28,6 +28,7 @@ use Enna\Framework\Helper\Str;
  * @property Cookie $cookie
  * @property Session $session
  * @property Db $db
+ * @property Console $console
  */
 class App extends Container
 {
@@ -134,11 +135,13 @@ class App extends Container
         'cache' => Cache::class,
         'filesystem' => Filesystem::class,
         'validate' => Validate::class,
+        'view' => View::class,
         'lang' => Lang::class,
         'cookie' => Cookie::class,
         'session' => Session::class,
         'db' => Db::class,
         'Enna\Orm\DbManager' => Db::class,
+        'console' => Console::class,
     ];
 
     /**
@@ -208,9 +211,15 @@ class App extends Container
         date_default_timezone_set($this->config->get('app.default_timezone', 'Asia/Shanghai'));
 
         //初始化
-        foreach ($this->initializers as $initializer) {
-            $this->make($initializer)->init($this);
+        try{
+            foreach ($this->initializers as $initializer) {
+                $this->make($initializer)->init($this);
+            }
+         
+        }catch (\Exception $e){
+            echo $e->getFile().$e->getLine().$e->getMessage();exit;
         }
+       
         return $this;
     }
 
@@ -277,6 +286,7 @@ class App extends Container
         if (is_dir($configPath)) {
             $files = glob($configPath . '*' . $this->configExt);
         }
+
         foreach ($files as $file) {
             $this->config->load($file, pathinfo($file, PATHINFO_FILENAME));
         }
@@ -410,10 +420,10 @@ class App extends Container
      */
     public function parseClass(string $layer, string $name)
     {
-        $name  = str_replace(['/', '.'], '\\', $name);
+        $name = str_replace(['/', '.'], '\\', $name);
         $array = explode('\\', $name);
         $class = Str::studly(array_pop($array));
-        $path  = $array ? implode('\\', $array) . '\\' : '';
+        $path = $array ? implode('\\', $array) . '\\' : '';
 
         return $this->namespace . '\\' . $layer . '\\' . $path . $class;
 

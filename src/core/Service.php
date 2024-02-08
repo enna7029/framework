@@ -12,6 +12,10 @@ namespace Enna\Framework;
  */
 abstract class Service
 {
+    /**
+     * 应用实例
+     * @var App
+     */
     protected $app;
 
     public function __construct(App $app)
