@@ -275,7 +275,7 @@ class Console
             return strlen($string);
         }
 
-        if ($encoding = mb_detect_encoding($string) === false) {
+        if (false === $encoding = mb_detect_encoding($string)) {
             return strlen($string);
         }
 
@@ -404,7 +404,7 @@ class Console
             return str_split($string, $width);
         }
 
-        if ($encoding = mb_detect_encoding($string) === false) {
+        if (false === $encoding = mb_detect_encoding($string)) {
             return str_split($string, $width);
         }
 
@@ -413,7 +413,7 @@ class Console
         $lines = [];
         $line = '';
         foreach (preg_split('//u', $utf8String) as $char) {
-            if (mb_strwidth($line . $charm, 'utf8') <= $width) {
+            if (mb_strwidth($line . $char, 'utf8') <= $width) {
                 $line .= $char;
                 continue;
             }

@@ -42,6 +42,12 @@ class Http
      */
     protected $routePath;
 
+    /**
+     * 是否绑定应用
+     * @var bool
+     */
+    protected $isBind;
+
     public function __construct(App $app)
     {
         $this->app = $app;
@@ -124,6 +130,31 @@ class Http
     public function setRoutePath(string $path)
     {
         $this->routePath = $path;
+    }
+
+    /**
+     * Note: 设置应用绑定
+     * Date: 2024-03-05
+     * Time: 10:16
+     * @param bool $bind 是否绑定
+     * @return $this
+     */
+    public function setBind(bool $bind = true)
+    {
+        $this->isBind = $bind;
+
+        return $this;
+    }
+
+    /**
+     * Note: 是否绑定应用
+     * Date: 2024-03-05
+     * Time: 10:17
+     * @return bool
+     */
+    public function isBind()
+    {
+        return $this->isBind;
     }
 
     /**

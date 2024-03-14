@@ -31,7 +31,6 @@ class Db extends DbManager
 
         $store = $db->getConfig('cache_store');
         $db->setCache($cache->store($store));
-
         $db->triggerSql();
 
         return $db;

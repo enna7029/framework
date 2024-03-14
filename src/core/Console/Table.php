@@ -112,7 +112,7 @@ class Table
      * @param int $align 对齐方式
      * @return void
      */
-    public function setHeadr(array $header, int $align = 1)
+    public function setHeader(array $header, int $align = 1)
     {
         $this->header = $header;
         $this->headerAlign = $align;

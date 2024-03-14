@@ -59,7 +59,7 @@ class Url
      * URL域名
      * @var bool|string
      */
-    protected $domain = true;
+    protected $domain = false;
 
     /**
      * Url constructor.
@@ -165,10 +165,10 @@ class Url
             $name = substr($url, 1, $pos - 1);
         }
 
-        //解析url
+        //解析路由地址
         if (strpos($url, '://') === false && strpos($url, '/') !== 0) {
             $info = parse_url($url);
-            $url = !empty($info) ? $info['path'] : '';
+            $url = !empty($info['path']) ? $info['path'] : '';
 
             if (isset($info['fragment'])) {
                 $anchor = $info['fragment'];

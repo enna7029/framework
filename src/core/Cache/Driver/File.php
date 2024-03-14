@@ -220,7 +220,7 @@ class File extends Driver
 
         $content = @file_get_contents($filename);
         if ($content !== false) {
-            $expire = substr($content, 8, 12);
+            $expire = (int)substr($content, 8, 12);
             if ($expire != 0 && time() - $expire > filemtime($filename)) {
                 $this->unlink($filename);
                 return;

@@ -133,7 +133,8 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
     public function make(string $abstract, array $vars = [], bool $newInstance = false)
     {
         $abstract = $this->getAlias($abstract);
-        if (isset($this->instances[$abstract])) {
+
+        if (isset($this->instances[$abstract]) && !$newInstance) {
             return $this->instances[$abstract];
         }
 
@@ -289,7 +290,7 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
             $name = $param->getName();
             $reflectionType = $param->getType();
 
-            if ($reflectionType && $reflectionType->isBuiltin() === false) {
+            if ($reflectionType && $reflectionType instanceof \ReflectionNamedType && $reflectionType->isBuiltin() === false) {
                 $args[] = $this->getObjectParam($reflectionType->getName(), $vars);
             } elseif ($type == 1 && !empty($vars)) {
                 $args[] = array_shift($vars);
@@ -354,10 +355,10 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
     public function getAlias($abstract)
     {
         if (isset($this->bind[$abstract])) {
-            $abstract = $this->bind[$abstract];
+            $bind = $this->bind[$abstract];
 
-            if (is_string($abstract)) {
-                return $this->getAlias($abstract);
+            if (is_string($bind)) {
+                return $this->getAlias($bind);
             }
         }
 

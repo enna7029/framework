@@ -166,5 +166,8 @@ class AppTest extends TestCase
     public function testParseClass()
     {
         $this->assertEquals('app\\controller\\SomeClass', $this->app->parseClass('controller', 'SomeClass'));
+
+        $this->app->setNamespace('app2');
+        $this->assertEquals('app2\\controller\SomeClass', $this->app->parseClass('controller', 'SomeClass'));
     }
 }

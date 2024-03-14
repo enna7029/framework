@@ -136,7 +136,6 @@ class App extends Container
         'filesystem' => Filesystem::class,
         'validate' => Validate::class,
         'view' => View::class,
-        'lang' => Lang::class,
         'cookie' => Cookie::class,
         'session' => Session::class,
         'db' => Db::class,
@@ -211,15 +210,16 @@ class App extends Container
         date_default_timezone_set($this->config->get('app.default_timezone', 'Asia/Shanghai'));
 
         //初始化
-        try{
+        try {
             foreach ($this->initializers as $initializer) {
                 $this->make($initializer)->init($this);
             }
-         
-        }catch (\Exception $e){
-            echo $e->getFile().$e->getLine().$e->getMessage();exit;
+
+        } catch (\Exception $e) {
+            echo $e->getFile() . $e->getLine() . $e->getMessage();
+            exit;
         }
-       
+
         return $this;
     }
 
@@ -587,6 +587,17 @@ class App extends Container
     }
 
     /**
+     * Note: 设置应用目录
+     * Date: 2024-03-05
+     * Time: 18:44
+     * @param string $path 应用目录
+     */
+    public function setAppPath(string $path)
+    {
+        $this->appPath = $path;
+    }
+
+    /**
      * Note: 获取配置目录
      * Date: 2022-09-16
      * Time: 17:08
@@ -627,6 +638,17 @@ class App extends Container
     public function getRuntimePath()
     {
         return $this->runtimePath;
+    }
+
+    /**
+     * Note: 设置runtime目录
+     * Date: 2024-03-05
+     * Time: 18:39
+     * @param string $path
+     */
+    public function setRuntimePath(string $path)
+    {
+        $this->runtimePath = $path;
     }
 }
 

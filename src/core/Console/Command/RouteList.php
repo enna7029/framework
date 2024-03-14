@@ -80,7 +80,7 @@ class RouteList extends Command
             $header = ['Rule', 'Route', 'Method', 'Name'];
         }
 
-        $table->setHeadr($header);
+        $table->setHeader($header);
 
         $rows = [];
         $routeList = $this->app->route->getRuleList();

@@ -114,9 +114,8 @@ abstract class Manager
     public function driver(string $name = null)
     {
         $name = $name ?: $this->getDefaultDriver();
-
+   
         if (is_null($name)) {
-            print_r(static::class);exit;
             throw new InvalidArgumentException(sprintf('无法解析的NULL驱动程序:[%s]', static::class));
         }
 

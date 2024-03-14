@@ -226,10 +226,11 @@ class Event
             $params = $event;
             $event = get_class($event);
         }
-
+        
         if (isset($this->bind[$event])) {
             $event = $this->bind[$event];
         }
+      
         $result = [];
         $listeners = $this->listener[$event] ?? [];
         $listeners = array_unique($listeners, SORT_REGULAR);

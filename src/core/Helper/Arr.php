@@ -96,6 +96,10 @@ class Arr
      */
     public static function get($data, $name, $default = null)
     {
+        if (!static::accessible($data)) {
+            return $default;
+        }
+
         if (empty($name)) {
             return $data;
         }
