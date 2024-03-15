@@ -6,13 +6,13 @@ namespace Enna\Framework;
 use Enna\Framework\Cache\TagSet;
 use Psr\SimpleCache\CacheInterface;
 use Enna\Framework\Cache\Driver;
-use InvalidArgumentException;
 use Enna\Framework\Helper\Arr;
 
 /**
  * 缓存管理
  * Class Cache
  * @package Enna\Framework
+ * @mixin \Enna\Framework\Cache\Driver\File
  */
 class Cache extends Manager implements CacheInterface
 {

@@ -10,7 +10,7 @@ class ClassNotFoundException extends RuntimeException implements NotFoundExcepti
 {
     public $class;
 
-    public function __construct(string $message, string $class, Throwable $previous = null)
+    public function __construct(string $message, string $class = '', Throwable $previous = null)
     {
         $this->message = $message;
         $this->class = $class;

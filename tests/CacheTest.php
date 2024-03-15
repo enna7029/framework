@@ -102,10 +102,53 @@ class CacheTest extends TestCase
 
         $this->cache->tag('foo')->set('bar', 'foobar');
         $this->assertEquals('foobar', $this->cache->get('bar'));
+        $this->cache->tag('foo')->remember('baz', 'foobar');
+        $this->assertEquals('foobar', $this->cache->get('baz'));
+        $this->cache->tag('foo')->clear();
+        $this->assertFalse($this->cache->has('bar'));
+
+        $this->cache->setMultiple(['foo' => ['foobar', 'bar'], 'foobar' => ['foo', 'bar']]);
+        $this->cache->tag('foo')->setMultiple(['foo' => ['foobar', 'bar'], 'foobar' => ['foo', 'bar']]);
+        $this->assertEquals(['foo' => ['foobar', 'bar'], 'foobar' => ['foo', 'bar']], $this->cache->getMultiple(['foo', 'foobar']));
+        $this->assertIsInt($this->cache->getWriteTimes());
+        $this->assertTrue($this->cache->deleteMultiple(['foo', 'foobar']));
     }
 
     public function testRedisCache()
     {
-        $this->assertTrue(true, true);
+        if (!extension_loaded('redis')) {
+            $this->assertTrue(true);
+            return;
+        }
+        $this->config->shouldReceive('get')->with("cache.default", null)->andReturn('redis');
+        $this->config->shouldReceive('get')->with("cache.stores.redis", null)->andReturn(['type' => 'redis']);
+
+        $redis = Mockery::mock('overload:\Predis\Client');
+
+        $redis->shouldReceive("set")->once()->with('foo', 5)->andReturnTrue();
+        $redis->shouldReceive("incrby")->once()->with('foo', 1)->andReturnTrue();
+        $redis->shouldReceive("decrby")->once()->with('foo', 2)->andReturnTrue();
+        $redis->shouldReceive("get")->once()->with('foo')->andReturn('6');
+        $redis->shouldReceive("get")->once()->with('foo')->andReturn('4');
+        $this->cache->set('foo', 5);
+        $this->cache->inc('foo');
+        $this->assertEquals(6, $this->cache->get('foo'));
+        $this->cache->dec('foo', 2);
+        $this->assertEquals(4, $this->cache->get('foo'));
+
+        $redis->shouldReceive('set')->once()->with('bar', serialize(true))->andReturnTrue();
+        $redis->shouldReceive('set')->once()->with('baz', serialize(null))->andReturnTrue();
+        $redis->shouldReceive('del')->once()->with('baz')->andReturnTrue();
+        $redis->shouldReceive('flushDB')->once()->andReturnTrue();
+        $this->cache->set('bar', true);
+        $this->cache->set('baz', null);
+        $this->cache->delete('baz');
+        $this->cache->clear();
+
+        $redis->shouldReceive("sAdd")->once()->with('tag:' . md5('foo'), 'bar')->andReturnTrue();
+        $redis->shouldReceive("sMembers")->once()->with('tag:' . md5('foo'))->andReturn(['bar']);
+        $redis->shouldReceive("del")->once()->with('tag:' . md5('foo'))->andReturnTrue();
+        $this->cache->tag('foo')->set('bar', 'foobar');
+        $this->cache->tag('foo')->clear();
     }
 }

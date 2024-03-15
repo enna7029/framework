@@ -108,9 +108,9 @@ class Redis extends Driver
         $value = $this->serialize($value);
 
         if ($expire) {
-            $this->handler->setex($name, $expire, $value);
+            $this->handler->setex($key, $expire, $value);
         } else {
-            $this->handler->set($name, $value);
+            $this->handler->set($key, $value);
         }
 
         return true;
@@ -128,7 +128,7 @@ class Redis extends Driver
     {
         $this->readTimes++;
         $key = $this->getCacheKey($name);
-        $value = $this->handler->get($name);
+        $value = $this->handler->get($key);
 
         if (is_null($value) || $value == false) {
             return $default;
@@ -220,9 +220,7 @@ class Redis extends Driver
      */
     public function clearTag(array $keys)
     {
-        foreach ($keys as $key) {
-            $this->handler->del($key);
-        }
+        $this->handler->del($keys);
     }
 
     /**
@@ -247,7 +245,7 @@ class Redis extends Driver
      */
     public function getTagItems(string $tag)
     {
-        $name = $this->getTagItems($tag);
+        $name = $this->getTagKey($tag);
         $key = $this->getCacheKey($name);
         return $this->handler->sMembers($key);
     }

@@ -83,7 +83,13 @@ class File extends Driver
         }
 
         $data = "<?php\n//" . sprintf('%012d', $expire) . "\n exit();?>\n" . $data;
-        $result = file_put_contents($filename, $data);
+
+        if (str_contains($filename, '://') && !str_starts_with($filename, 'file://')) {
+            //虚拟文件不加锁
+            $result = file_put_contents($filename, $data);
+        } else {
+            $result = file_put_contents($filename, $data, LOCK_EX);
+        }
 
         if ($result) {
             clearstatcache();
@@ -208,7 +214,7 @@ class File extends Driver
      * Date: 2022-12-24
      * Time: 17:03
      * @param string $name 缓存变量名
-     * @return array|null
+     * @return array|void
      */
     protected function getRaw(string $name)
     {

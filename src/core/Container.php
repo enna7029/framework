@@ -16,6 +16,7 @@ use ReflectionFunctionAbstract;
 use Enna\Framework\Exception\ClassNotFoundException;
 use Enna\Framework\Exception\FuncNotFoundException;
 use Psr\Container\ContainerInterface;
+use Enna\Framework\Helper\Str;
 
 /**
  * 容器管理类 支持PSR-11
@@ -103,6 +104,8 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
                 $this->bind[$abstract] = $concrete;
             }
         }
+
+        return $this;
     }
 
     /**
@@ -179,6 +182,8 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
     {
         if ($callable instanceof Closure) {
             return $this->invokeFunction($callable, $vars);
+        } elseif (is_string($callable) && !str_contains($callable, '::')) {
+            return $this->invokeFunction($callable, $vars);
         } else {
             return $this->invokeMethod($callable, $vars);
         }
@@ -189,19 +194,24 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
      * User: enna
      * Date: 2022-09-19
      * Time: 17:53
-     * @param $method
-     * @param array $vars
+     * @param mixed $method 方法
+     * @param array $vars 参数
+     * @param bool $accessible 设置是否可访问
+     * @return mixed
      */
-    public function invokeMethod($method, array $vars = [])
+    public function invokeMethod($method, array $vars = [], bool $accessible = false)
     {
         if (is_array($method)) {
             [$class, $method] = $method;
 
             $class = is_object($class) ? $class : $this->invokeClass($class);
+        } else {
+            // 静态方法
+            [$class, $method] = explode('::', $method);
         }
 
         try {
-            $reflect = new  ReflectionMethod($class, $method);
+            $reflect = new ReflectionMethod($class, $method);
         } catch (ReflectionException $e) {
             $class = is_object($class) ? get_class($class) : $class;
             throw new FuncNotFoundException('method not exists:' . $class . '->' . $method . '()', $class . '->' . $method . '()', $e);
@@ -209,7 +219,11 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
 
         $args = $this->bindParams($reflect, $vars);
 
-        return $reflect->invokeArgs($class, $args);
+        if ($accessible) {
+            $reflect->setAccessible($accessible);
+        }
+
+        return $reflect->invokeArgs(is_object($class) ? $class : null, $args);
     }
 
     /**
@@ -288,6 +302,7 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
         $args = [];
         foreach ($params as $param) {
             $name = $param->getName();
+            $lowerName = Str::snake($name);
             $reflectionType = $param->getType();
 
             if ($reflectionType && $reflectionType instanceof \ReflectionNamedType && $reflectionType->isBuiltin() === false) {
@@ -296,6 +311,8 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
                 $args[] = array_shift($vars);
             } elseif ($type == 0 && array_key_exists($name, $vars)) {
                 $args[] = $vars[$name];
+            } elseif ($type == 0 && array_key_exists($lowerName, $vars)) {
+                $args[] = $vars[$lowerName];
             } elseif ($param->isDefaultValueAvailable()) {
                 $args[] = $param->getDefaultValue();
             } else {
@@ -448,7 +465,7 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
     public function resolving($abstract, Closure $callback = null)
     {
         if ($abstract instanceof Closure) {
-            $this->invokeCallback['*'] = $abstract;
+            $this->invokeCallback['*'][] = $abstract;
             return;
         }
 
@@ -475,7 +492,7 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
 
         if (isset($this->invokeCallback[$class])) {
             foreach ($this->invokeCallback[$class] as $callback) {
-                $callback($class, $this);
+                $callback($object, $this);
             }
         }
     }

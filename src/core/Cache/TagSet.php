@@ -64,6 +64,27 @@ class TagSet
     }
 
     /**
+     * Note: 写入缓存
+     * Date: 2024-03-14
+     * Time: 18:27
+     * @param iterable $values 缓存数据
+     * @param int|\DateInterval|\DateTimeInterface|null $ttl 有效时间 0:永久
+     * @return bool
+     */
+    public function setMultiple(iterable $values, int|\DateInterval|\DateTimeInterface $ttl = null): bool
+    {
+        foreach ($values as $key => $val) {
+            $result = $this->set($key, $val, $ttl);
+
+            if (false === $result) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Note: 追加缓存标识到标签
      * Date: 2022-12-27
      * Time: 17:44
@@ -95,5 +116,7 @@ class TagSet
             $key = $this->handler->getTagKey($tag);
             $this->handler->delete($key);
         }
+
+        return true;
     }
 }

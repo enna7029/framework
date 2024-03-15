@@ -5,9 +5,7 @@ namespace Enna\Framework\Cache;
 
 use Enna\Framework\Container;
 use Enna\Framework\Contract\CacheHandlerInterface;
-use http\Exception\InvalidArgumentException;
 use Psr\SimpleCache\CacheInterface;
-use SebastianBergmann\FileIterator\Iterator;
 use Exception;
 use Throwable;
 use Closure;
@@ -211,7 +209,7 @@ abstract class Driver implements CacheInterface, CacheHandlerInterface
         $item = $this->get($name, []);
 
         if (!is_array($item)) {
-            throw new InvalidArgumentException('只允许追加数组格式的缓存');
+            throw new \InvalidArgumentException('只允许追加数组格式的缓存');
         }
 
         $item[] = $value;
@@ -230,7 +228,7 @@ abstract class Driver implements CacheInterface, CacheHandlerInterface
      * Date: 2022-12-28
      * Time: 18:28
      * @param string $name 缓存变量名
-     * @return mixed
+     * @return mixed|void
      */
     public function pull(string $name)
     {
@@ -254,7 +252,9 @@ abstract class Driver implements CacheInterface, CacheHandlerInterface
     public function remember(string $name, $value, $expire = null)
     {
         if ($this->has($name)) {
-            return $this->get($name);
+            if (($hit = $this->get($name)) !== null) {
+                return $hit;
+            }
         }
 
         $time = time();
@@ -272,7 +272,7 @@ abstract class Driver implements CacheInterface, CacheHandlerInterface
             $this->set($name, $value, $expire);
 
             $this->delete($name . '_lock');
-        } catch (Exception | Throwable) {
+        } catch (Exception | Throwable $e) {
             $this->delete($name . '_lock');
             throw $e;
         }
