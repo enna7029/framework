@@ -8,6 +8,7 @@ use Enna\Framework\App;
 use Enna\Framework\Request;
 use Enna\Framework\Response;
 use Enna\Framework\Validate;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * 路由调度基础类
@@ -95,7 +96,13 @@ abstract class Dispatch
     {
         if ($data instanceof Response) {
             $response = $data;
-        } elseif (!is_null($data)) {
+        } elseif ($data instanceof ResponseInterface) {
+            $response = Response::create((string) $data->getBody(), 'html', $data->getStatusCode());
+
+            foreach ($data->getHeaders() as $header => $values) {
+                $response->header([$header => implode(", ", $values)]);
+            }
+        }elseif (!is_null($data)) {
             $type = $this->request->isJson() ? 'json' : 'html';
             $response = Response::create($data, $type);
         } else {

@@ -18,6 +18,10 @@ class Env implements ArrayAccess
      */
     protected $data;
 
+    /**
+     * 数据转换映射
+     * @var array
+     */
     protected $convert = [
         'true' => true,
         'false' => false,
@@ -96,7 +100,26 @@ class Env implements ArrayAccess
             return $result;
         }
 
-        return $default;
+        return $this->getEnv($name, $default);
+    }
+
+    protected function getEnv(string $name, $default = null)
+    {
+        $result = getenv('PHP_' . $name);
+
+        if ($result === false) {
+            return $default;
+        }
+
+        if (isset($this->convert[$result])) {
+            $result = $this->convert[$result];
+        }
+
+        if (!isset($this->data[$name])) {
+            $this->data[$name] = $result;
+        }
+
+        return $result;
     }
 
     /**

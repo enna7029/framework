@@ -161,15 +161,16 @@ class Http
      * Note: 执行应用程序
      * Date: 2022-09-17
      * Time: 17:22
+     * @param Request|null $request
      * @return Response
      */
-    public function run(): Response
+    public function run(Request $request = null): Response
     {
         //初始化
         $this->initialize();
 
         //实例化request对象
-        $request = $this->app->make('request', [], true);
+        $request = $request ?? $this->app->make('request', [], true);
         $this->app->instance('request', $request);
 
         try {

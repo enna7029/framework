@@ -23,7 +23,7 @@ class Event
 
     /**
      * 事件别名
-     * @var string[]
+     * @var array
      */
     protected $bind = [
         'AppInit' => Event\AppInit::class,
@@ -185,7 +185,7 @@ class Event
         if (empty($prefix) && $reflect->hasProperty('eventPrefix')) {
             $reflectProperty = $reflect->hasProperty('eventPrefix');
             $reflectProperty->setAccessible(true);
-            $prefix = $reflectProperty->getValue($observer);
+            $prefix = $reflectProperty->getValue($subscriber);
         }
 
         foreach ($methods as $method) {
@@ -226,11 +226,11 @@ class Event
             $params = $event;
             $event = get_class($event);
         }
-        
+
         if (isset($this->bind[$event])) {
             $event = $this->bind[$event];
         }
-      
+
         $result = [];
         $listeners = $this->listener[$event] ?? [];
         $listeners = array_unique($listeners, SORT_REGULAR);
