@@ -55,27 +55,27 @@ class Arr
      * Date: 2023-03-02
      * Time: 10:22
      * @param array $data 数据源
-     * @param string $name 键(对多个键,使用.符号分隔)
+     * @param string|array $name 键(对多个键,使用.符号分隔)
      * @return bool
      */
-    public static function has($data, $name)
+    public static function has($array, $keys)
     {
-        $name = (array)$name;
+        $keys = (array) $keys;
 
-        if (!$data || $name = []) {
+        if (!$array || $keys === []) {
             return false;
         }
 
-        foreach ($name as $item) {
-            $subData = $data;
+        foreach ($keys as $key) {
+            $subKeyArray = $array;
 
-            if (array_key_exists($item, $data)) {
+            if (static::exists($array, $key)) {
                 continue;
             }
 
-            foreach (explode('.', $item) as $sub_name) {
-                if (static::accessible($subData) && array_key_exists($sub_name, $subData)) {
-                    $subData = $subData[$sub_name];
+            foreach (explode('.', $key) as $segment) {
+                if (static::accessible($subKeyArray) && static::exists($subKeyArray, $segment)) {
+                    $subKeyArray = $subKeyArray[$segment];
                 } else {
                     return false;
                 }
